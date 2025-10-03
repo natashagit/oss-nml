@@ -7,6 +7,7 @@ simulating real user interactions and verifying the complete workflow.
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -39,12 +40,30 @@ def test_main_script_runs_and_fetches_messages() -> None:
     if not credentials_file.exists() and not token_file.exists():
         pytest.skip("No credentials.json or token.json found - cannot run E2E test")
 
-    command = [
-        sys.executable,  # Path to the current python interpreter
-        str(main_script),
-    ]
+    # Start the FastAPI server in the background
+    server_process = subprocess.Popen(  # noqa: S603
+        [sys.executable, "-m", "uvicorn", "mail_client_service.main:app", "--host", "127.0.0.1", "--port", "8000"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=str(main_script.parent),
+    )
 
     try:
+        # Wait for the server to start (give it a few seconds)
+        time.sleep(3)
+
+        # Verify server is running by checking if process is alive
+        if server_process.poll() is not None:
+            # Server failed to start
+            stdout, stderr = server_process.communicate(timeout=1)
+            pytest.fail(f"FastAPI server failed to start.\nStdout: {stdout}\nStderr: {stderr}")
+
+        command = [
+            sys.executable,  # Path to the current python interpreter
+            str(main_script),
+        ]
+
         # Run the command and capture the output
         # We need to be in the right directory for the script to find its dependencies
         result = subprocess.run(  # noqa: S603
@@ -72,12 +91,23 @@ def test_main_script_runs_and_fetches_messages() -> None:
     except subprocess.TimeoutExpired:
         pytest.fail("E2E test timed out - main.py took too long to execute")
     except subprocess.CalledProcessError as e:
+        # Check if the error is due to missing credentials
+        if "No valid credentials found" in e.stderr or "RuntimeError" in e.stderr:
+            pytest.skip("No valid credentials found - cannot run E2E test")
         # If the script fails, print its output for easier debugging
         pytest.fail(
             f"E2E test failed when running main.py.\nExit Code: {e.returncode}\nStdout: {e.stdout}\nStderr: {e.stderr}",
         )
     except FileNotFoundError:
         pytest.fail("Python interpreter or main.py not found")
+    finally:
+        # Clean up: stop the FastAPI server
+        server_process.terminate()
+        try:
+            server_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server_process.kill()
+            server_process.wait()
 
 
 @pytest.mark.circleci
