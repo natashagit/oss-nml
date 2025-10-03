@@ -20,28 +20,18 @@ import mail_client_api
 pytestmark = pytest.mark.e2e
 
 
-@pytest.mark.local_credentials
-def test_main_script_runs_and_fetches_messages() -> None:
-    """Tests that the main.py script can be executed and successfully prints output indicating it has fetched messages.
-
-    This test requires real credentials and a live internet connection.
-    Only runs locally with credentials.json or token.json files.
-    """
-    # Get the path to main.py (should be in the workspace root)
-    main_script = Path(__file__).parent.parent.parent / "main.py"
-
-    if not main_script.exists():
-        pytest.skip(f"main.py not found at {main_script}")
-
-    # Check if credentials exist
+def _check_credentials_exist(main_script: Path) -> None:
+    """Check if credentials exist, skip test if not."""
     credentials_file = main_script.parent / "credentials.json"
     token_file = main_script.parent / "token.json"
 
     if not credentials_file.exists() and not token_file.exists():
         pytest.skip("No credentials.json or token.json found - cannot run E2E test")
 
-    # Start the FastAPI server in the background
-    server_process = subprocess.Popen(  # noqa: S603
+
+def _start_fastapi_server(main_script: Path) -> subprocess.Popen:
+    """Start the FastAPI server in the background."""
+    return subprocess.Popen(  # noqa: S603
         [sys.executable, "-m", "uvicorn", "mail_client_service.main:app", "--host", "127.0.0.1", "--port", "8000"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -49,65 +39,69 @@ def test_main_script_runs_and_fetches_messages() -> None:
         cwd=str(main_script.parent),
     )
 
+
+def _verify_server_started(server_process: subprocess.Popen) -> None:
+    """Verify the server started successfully."""
+    time.sleep(3)
+    if server_process.poll() is not None:
+        stdout, stderr = server_process.communicate(timeout=1)
+        pytest.fail(f"FastAPI server failed to start.\nStdout: {stdout}\nStderr: {stderr}")
+
+
+def _stop_fastapi_server(server_process: subprocess.Popen) -> None:
+    """Stop the FastAPI server gracefully."""
+    server_process.terminate()
     try:
-        # Wait for the server to start (give it a few seconds)
-        time.sleep(3)
+        server_process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        server_process.kill()
+        server_process.wait()
 
-        # Verify server is running by checking if process is alive
-        if server_process.poll() is not None:
-            # Server failed to start
-            stdout, stderr = server_process.communicate(timeout=1)
-            pytest.fail(f"FastAPI server failed to start.\nStdout: {stdout}\nStderr: {stderr}")
 
-        command = [
-            sys.executable,  # Path to the current python interpreter
-            str(main_script),
-        ]
+@pytest.mark.local_credentials
+def test_main_script_runs_and_fetches_messages() -> None:
+    """Tests that the main.py script can be executed and successfully prints output indicating it has fetched messages.
 
-        # Run the command and capture the output
-        # We need to be in the right directory for the script to find its dependencies
+    This test requires real credentials and a live internet connection.
+    Only runs locally with credentials.json or token.json files.
+    """
+    main_script = Path(__file__).parent.parent.parent / "main.py"
+
+    if not main_script.exists():
+        pytest.skip(f"main.py not found at {main_script}")
+
+    _check_credentials_exist(main_script)
+
+    server_process = _start_fastapi_server(main_script)
+
+    try:
+        _verify_server_started(server_process)
+
+        command = [sys.executable, str(main_script)]
+
         result = subprocess.run(  # noqa: S603
             command,
             capture_output=True,
             text=True,
-            check=True,  # Fail the test if the script returns a non-zero exit code
-            timeout=120,  # Longer timeout for real network calls
-            cwd=str(main_script.parent),  # Run from the script's directory
+            check=True,
+            timeout=120,
+            cwd=str(main_script.parent),
         )
 
-        # Assert that the script's output contains expected text
-        output = result.stdout
-
-        assert "Demo complete" in output
-
-        # Should have found at least some messages
-        if "Found Message:" in output:
-            # Extract number of messages found
-            lines = output.split("\n")
-            found_line = next((line for line in lines if "Found Message:" in line), None)
-            if found_line:
-                pass
+        assert "Demo complete" in result.stdout
 
     except subprocess.TimeoutExpired:
         pytest.fail("E2E test timed out - main.py took too long to execute")
     except subprocess.CalledProcessError as e:
-        # Check if the error is due to missing credentials
         if "No valid credentials found" in e.stderr or "RuntimeError" in e.stderr:
             pytest.skip("No valid credentials found - cannot run E2E test")
-        # If the script fails, print its output for easier debugging
         pytest.fail(
             f"E2E test failed when running main.py.\nExit Code: {e.returncode}\nStdout: {e.stdout}\nStderr: {e.stderr}",
         )
     except FileNotFoundError:
         pytest.fail("Python interpreter or main.py not found")
     finally:
-        # Clean up: stop the FastAPI server
-        server_process.terminate()
-        try:
-            server_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            server_process.kill()
-            server_process.wait()
+        _stop_fastapi_server(server_process)
 
 
 @pytest.mark.circleci
