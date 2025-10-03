@@ -24,9 +24,6 @@ dev = [
 members = [
   "src/mail_client_api",
   "src/gmail_client_impl",
-  "src/mail_client_service",
-  "src/mail_client_adapter",
-  "src/mail_client_service_client",
 ]
 
 [tool.ruff]
@@ -76,12 +73,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = [
-    "*/tests/*",                
-    "*/__main__.py",            
-    "src/mail_client_service_client/*", # Auto-generated OpenAPI client, tested indirectly
-]
-
+omit = ["*/tests/*", "*/__main__.py"]
 
 [tool.coverage.report]
 fail_under = 85 # Justification: A high threshold ensures most code is tested.
@@ -90,15 +82,3 @@ exclude_lines = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
 ]
-
-[dependency-groups]
-dev = [
-    "openapi-python-client>=0.26.1",
-]
-
-[tool.uv.sources]
-mail_client_api = { workspace = true }
-gmail_client_impl = { workspace = true }
-mail_client_service = { workspace = true }
-mail_client_adapter = { workspace = true }
-mail_client_service_client = { workspace = true }
