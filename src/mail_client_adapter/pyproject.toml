@@ -1,0 +1,16 @@
+[project]
+name = "mail_client_adapter"
+version = "0.1.0"
+description = "Adapter wrapping the generated service client to implement mail_client_api.Client"
+requires-python = ">=3.11"
+
+dependencies = [
+    "mail_client_api",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+]
