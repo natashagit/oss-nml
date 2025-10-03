@@ -4,8 +4,8 @@ from typing import Annotated
 
 import gmail_client_impl  # noqa: F401 - Registers the client implementation
 from fastapi import Depends, FastAPI, HTTPException, Query
-
 from mail_client_api import Client
+
 from mail_client_service.dependencies import get_mail_client
 from mail_client_service.models import MessageDetail, MessageSummary, OperationResponse
 
@@ -16,10 +16,10 @@ app = FastAPI(
 )
 
 
-@app.get("/messages", response_model=list[MessageSummary])
+@app.get("/messages")
 def get_messages(
     max_results: Annotated[int, Query(ge=1, le=100)] = 10,
-    client: Client = Depends(get_mail_client),
+    client: Annotated[Client, Depends(get_mail_client)] = ...,
 ) -> list[MessageSummary]:
     """Fetch a list of message summaries.
 
@@ -47,10 +47,10 @@ def get_messages(
         raise HTTPException(status_code=500, detail=f"Failed to fetch messages: {e!s}") from e
 
 
-@app.get("/messages/{message_id}", response_model=MessageDetail)
+@app.get("/messages/{message_id}")
 def get_message(
     message_id: str,
-    client: Client = Depends(get_mail_client),
+    client: Annotated[Client, Depends(get_mail_client)],
 ) -> MessageDetail:
     """Fetch the full detail of a single message.
 
@@ -77,14 +77,14 @@ def get_message(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=404, detail=f"Message {message_id} not found: {e!s}"
+            status_code=404, detail=f"Message {message_id} not found: {e!s}",
         ) from e
 
 
-@app.post("/messages/{message_id}/mark-as-read", response_model=OperationResponse)
+@app.post("/messages/{message_id}/mark-as-read")
 def mark_message_as_read(
     message_id: str,
-    client: Client = Depends(get_mail_client),
+    client: Annotated[Client, Depends(get_mail_client)],
 ) -> OperationResponse:
     """Mark a message as read.
 
@@ -104,14 +104,14 @@ def mark_message_as_read(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to mark message as read: {e!s}"
+            status_code=500, detail=f"Failed to mark message as read: {e!s}",
         ) from e
 
 
-@app.delete("/messages/{message_id}", response_model=OperationResponse)
+@app.delete("/messages/{message_id}")
 def delete_message(
     message_id: str,
-    client: Client = Depends(get_mail_client),
+    client: Annotated[Client, Depends(get_mail_client)],
 ) -> OperationResponse:
     """Delete a message.
 
@@ -131,7 +131,7 @@ def delete_message(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to delete message: {e!s}"
+            status_code=500, detail=f"Failed to delete message: {e!s}",
         ) from e
 
 

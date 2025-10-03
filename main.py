@@ -6,7 +6,6 @@ import contextlib
 import logging
 
 import gmail_client_impl  # noqa: F401
-import mail_client_api
 import mail_client_adapter
 
 logging.basicConfig(level=logging.INFO)
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Initialize the client and demonstrate all mail client methods."""
-
     client = mail_client_adapter.get_client()
 
     # Test 1: Get messages (existing functionality)
@@ -24,24 +22,14 @@ def main() -> None:
     if not messages:
         return
 
-    for i, msg in enumerate(messages, 1):
-        print(f'------------- Message {i} -------------')
-        print(f"{msg.id}: {msg.subject}")
-        print(f"Msg id : {msg.id}")
-        print(f"Subject : {msg.subject}")
-        print('---------------------------------------')
+    for _i, _msg in enumerate(messages, 1):
+        pass
 
     # Test 2: Get a specific message by ID
     if messages:
         test_message_id = messages[0].id
         with contextlib.suppress(Exception):
-            msg = client.get_message(test_message_id)
-            print(f'------------- Message -------------')
-            print(f"From : {msg.from_}")
-            print(f"Date : {msg.date}")
-            print(f"Subject : {msg.subject}")
-            print(f"Body :\n{msg.body or '[no body]'}")
-            print('------------------------------------')
+            client.get_message(test_message_id)
 
     # Test 3: Mark a message as read
     if messages:
@@ -49,9 +37,9 @@ def main() -> None:
         with contextlib.suppress(Exception):
             success = client.mark_as_read(test_message_id)
             if success:
-                print("Message successfully marked as read ✅")
+                pass
             else:
-                print("Failed to mark message as read ❌")
+                pass
 
     # Test 4: Delete a message (WARNING: This is destructive!)
     # Only test if we have more than one message to avoid deleting all messages

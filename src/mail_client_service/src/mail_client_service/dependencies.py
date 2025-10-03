@@ -4,8 +4,10 @@ from collections.abc import Callable
 
 from mail_client_api import Client, get_client
 
+
 # Global client factory - can be overridden for testing
-_client_factory: Callable[[], Client] = lambda: get_client(interactive=False)
+def _client_factory() -> Client:
+    return get_client(interactive=False)
 
 
 def get_mail_client() -> Client:
@@ -27,5 +29,5 @@ def set_client_factory(factory: Callable[[], Client]) -> None:
         factory: A callable that returns a Client instance.
 
     """
-    global _client_factory
+    global _client_factory  # noqa: PLW0603
     _client_factory = factory
