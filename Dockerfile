@@ -20,5 +20,5 @@ RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8000
 
-# no --app-dir needed once installed
+# no --app-dir needed once installed!
 CMD ["uv", "run", "uvicorn", "mail_client_service.main:app","--host", "0.0.0.0", "--port", "8000"]
