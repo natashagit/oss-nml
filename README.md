@@ -236,6 +236,18 @@ The project includes a comprehensive CircleCI configuration (`.circleci/config.y
 
 See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 
+## Deployment
+
+- **Containerization**:  
+  The FastAPI `mail_client_service` has been containerized with a production-ready `Dockerfile`.  
+
+- **Fly.io Deployment**:  
+  The service is deployed on **Fly.io**, with configuration managed via `fly.toml`.
+
+- **Public Endpoint**:  
+  The deployed service is available over HTTPS at:  
+  👉 [https://oss-nml.fly.dev/](https://oss-nml.fly.dev/)  
+
 ## Development Workflow
 
 ### Quick Start
