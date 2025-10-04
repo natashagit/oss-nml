@@ -1,0 +1,29 @@
+# vcs & tooling
+.git
+.gitignore
+.github
+.idea
+.vscode
+
+# python junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# envs & builds
+.venv/
+.env
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.coverage.*
+
+# misc
+.DS_Store

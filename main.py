@@ -6,7 +6,7 @@ import contextlib
 import logging
 
 import gmail_client_impl  # noqa: F401
-import mail_client_api
+import mail_client_adapter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Initialize the client and demonstrate all mail client methods."""
-    # Now, get_client() returns a GmailClient instance...
-    client = mail_client_api.get_client(interactive=False)
+    client = mail_client_adapter.get_client()
 
     # Test 1: Get messages (existing functionality)
     messages = list(client.get_messages(max_results=3))
@@ -30,7 +29,7 @@ def main() -> None:
     if messages:
         test_message_id = messages[0].id
         with contextlib.suppress(Exception):
-            pass
+            client.get_message(test_message_id)
 
     # Test 3: Mark a message as read
     if messages:
