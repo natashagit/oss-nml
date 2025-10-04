@@ -1,10 +1,12 @@
 """Pydantic models for request/response serialization."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MessageSummary(BaseModel):
     """Summary representation of an email message."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     from_: str = Field(alias="from")
@@ -12,14 +14,11 @@ class MessageSummary(BaseModel):
     date: str
     subject: str
 
-    class Config:
-        """Pydantic model configuration."""
-
-        populate_by_name = True
-
 
 class MessageDetail(BaseModel):
     """Full detail representation of an email message."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     from_: str = Field(alias="from")
@@ -27,11 +26,6 @@ class MessageDetail(BaseModel):
     date: str
     subject: str
     body: str
-
-    class Config:
-        """Pydantic model configuration."""
-
-        populate_by_name = True
 
 
 class OperationResponse(BaseModel):

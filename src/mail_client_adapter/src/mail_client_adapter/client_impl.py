@@ -1,6 +1,8 @@
 """Service client implementation for mail client adapter."""
 
 # Import generated API calls from the `default` subpackage
+from collections.abc import Iterator
+
 from mail_client_api.message import Message
 from mail_client_service_client.api.default import (
     delete_message_messages_message_id_delete,
@@ -25,17 +27,21 @@ class ServiceClient(Client):
         """
         self.client = GeneratedClient(base_url=base_url)
 
-    def get_messages(self, max_results: int = 10) -> list[Message]:
+    def get_messages(self, max_results: int = 10) -> Iterator[Message]:
         """Retrieve a list of messages.
 
         Args:
             max_results: Maximum number of messages to retrieve.
 
         Returns:
-            List of message objects.
+            Iterator of message objects.
 
         """
-        return get_messages_messages_get.sync(client=self.client, max_results=max_results)
+        result = get_messages_messages_get.sync(client=self.client, max_results=max_results)
+        if not result or not isinstance(result, list):
+            return iter([])
+        # Type ignore because the generated client returns MessageSummary but we need Message
+        return iter(result)  # type: ignore[arg-type]
 
     def get_message(self, message_id: str) -> Message:
         """Retrieve a single message by ID.
@@ -47,7 +53,11 @@ class ServiceClient(Client):
             The message object.
 
         """
-        return get_message_messages_message_id_get.sync(client=self.client, message_id=message_id)
+        result = get_message_messages_message_id_get.sync(client=self.client, message_id=message_id)
+        if not result:
+            msg = f"Message {message_id} not found"
+            raise ValueError(msg)
+        return result  # type: ignore[return-value]
 
     def delete_message(self, message_id: str) -> bool:
         """Delete a message by ID.

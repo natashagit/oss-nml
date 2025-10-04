@@ -18,8 +18,8 @@ app = FastAPI(
 
 @app.get("/messages")
 def get_messages(
+    client: Annotated[Client, Depends(get_mail_client)],
     max_results: Annotated[int, Query(ge=1, le=100)] = 10,
-    client: Annotated[Client, Depends(get_mail_client)] = ...,
 ) -> list[MessageSummary]:
     """Fetch a list of message summaries.
 
@@ -34,13 +34,13 @@ def get_messages(
     try:
         messages = client.get_messages(max_results=max_results)
         return [
-            MessageSummary(
-                id=msg.id,
-                from_=msg.from_,
-                to=msg.to,
-                date=msg.date,
-                subject=msg.subject,
-            )
+            MessageSummary.model_validate({
+                "id": msg.id,
+                "from": msg.from_,
+                "to": msg.to,
+                "date": msg.date,
+                "subject": msg.subject,
+            })
             for msg in messages
         ]
     except Exception as e:
@@ -67,14 +67,14 @@ def get_message(
     """
     try:
         msg = client.get_message(message_id)
-        return MessageDetail(
-            id=msg.id,
-            from_=msg.from_,
-            to=msg.to,
-            date=msg.date,
-            subject=msg.subject,
-            body=msg.body,
-        )
+        return MessageDetail.model_validate({
+            "id": msg.id,
+            "from": msg.from_,
+            "to": msg.to,
+            "date": msg.date,
+            "subject": msg.subject,
+            "body": msg.body,
+        })
     except Exception as e:
         raise HTTPException(
             status_code=404, detail=f"Message {message_id} not found: {e!s}",
