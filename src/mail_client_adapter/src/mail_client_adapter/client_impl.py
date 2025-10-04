@@ -38,7 +38,7 @@ class ServiceClient(Client):
 
         """
         result = get_messages_messages_get.sync(client=self.client, max_results=max_results)
-        return iter(result) if result else iter([])
+        return list(result) if result else []
 
     def get_message(self, message_id: str) -> Message:
         """Retrieve a single message by ID.
