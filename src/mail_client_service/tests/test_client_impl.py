@@ -1,20 +1,26 @@
-import pytest
-from mail_client_service_client.models import (
-    MessageSummary,
-    MessageDetail,
-)
-from mail_client_service_client.api.default import (
-    get_messages_messages_get,
-    get_message_messages_message_id_get,
-    delete_message_messages_message_id_delete,
-    mark_message_as_read_messages_message_id_mark_as_read_post,
-)
+"""Unit tests for the ServiceClient adapter."""
 
 # Import the ServiceClient from mail_client_adapter
+from typing import TYPE_CHECKING
+
 from mail_client_adapter.client_impl import ServiceClient
+from mail_client_service_client.api.default import (
+    delete_message_messages_message_id_delete,
+    get_message_messages_message_id_get,
+    get_messages_messages_get,
+    mark_message_as_read_messages_message_id_mark_as_read_post,
+)
+from mail_client_service_client.models import (
+    MessageDetail,
+    MessageSummary,
+)
+
+if TYPE_CHECKING:
+    import pytest
 
 
-def test_get_messages_calls_generated_client(monkeypatch):
+def test_get_messages_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") -> None:
+    """Test that get_messages correctly calls the generated client."""
     mock_resp = [
         MessageSummary(
             id="1",
@@ -22,11 +28,11 @@ def test_get_messages_calls_generated_client(monkeypatch):
             to=["b@test.com"],
             date="2024-01-01",
             subject="Hi",
-        )
+        ),
     ]
     monkeypatch.setattr(
         get_messages_messages_get, "sync",
-        lambda client, max_results: mock_resp
+        lambda _client, _max_results: mock_resp,
     )
 
     svc = ServiceClient()
@@ -37,7 +43,8 @@ def test_get_messages_calls_generated_client(monkeypatch):
     assert resp[0].subject == "Hi"
 
 
-def test_get_message_calls_generated_client(monkeypatch):
+def test_get_message_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") -> None:
+    """Test that get_message correctly calls the generated client."""
     mock_resp = MessageDetail(
         id="123",
         from_="a@test.com",
@@ -48,7 +55,7 @@ def test_get_message_calls_generated_client(monkeypatch):
     )
     monkeypatch.setattr(
         get_message_messages_message_id_get, "sync",
-        lambda client, message_id: mock_resp
+        lambda _client, _message_id: mock_resp,
     )
 
     svc = ServiceClient()
@@ -59,52 +66,56 @@ def test_get_message_calls_generated_client(monkeypatch):
     assert resp.subject == "Hello"
 
 
-def test_delete_message_returns_true_on_ok(monkeypatch):
+def test_delete_message_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") -> None:
+    """Test that delete_message returns True when status is ok."""
     class FakeResp:
         status = "ok"
 
     monkeypatch.setattr(
         delete_message_messages_message_id_delete, "sync",
-        lambda client, message_id: FakeResp()
+        lambda _client, _message_id: FakeResp(),
     )
 
     svc = ServiceClient()
     assert svc.delete_message("123") is True
 
 
-def test_delete_message_returns_false_on_fail(monkeypatch):
+def test_delete_message_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch") -> None:
+    """Test that delete_message returns False when status is error."""
     class FakeResp:
         status = "error"
 
     monkeypatch.setattr(
         delete_message_messages_message_id_delete, "sync",
-        lambda client, message_id: FakeResp()
+        lambda _client, _message_id: FakeResp(),
     )
 
     svc = ServiceClient()
     assert svc.delete_message("123") is False
 
 
-def test_mark_as_read_returns_true_on_ok(monkeypatch):
+def test_mark_as_read_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") -> None:
+    """Test that mark_as_read returns True when status is ok."""
     class FakeResp:
         status = "ok"
 
     monkeypatch.setattr(
         mark_message_as_read_messages_message_id_mark_as_read_post, "sync",
-        lambda client, message_id: FakeResp()
+        lambda _client, _message_id: FakeResp(),
     )
 
     svc = ServiceClient()
     assert svc.mark_as_read("123") is True
 
 
-def test_mark_as_read_returns_false_on_fail(monkeypatch):
+def test_mark_as_read_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch") -> None:
+    """Test that mark_as_read returns False when status is error."""
     class FakeResp:
         status = "error"
 
     monkeypatch.setattr(
         mark_message_as_read_messages_message_id_mark_as_read_post, "sync",
-        lambda client, message_id: FakeResp()
+        lambda _client, _message_id: FakeResp(),
     )
 
     svc = ServiceClient()
