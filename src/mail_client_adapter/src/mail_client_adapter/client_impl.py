@@ -1,6 +1,8 @@
 """Service client implementation for mail client adapter."""
 
 # Import generated API calls from the `default` subpackage
+from collections.abc import Iterator
+
 from mail_client_api.message import Message
 from mail_client_service_client.api.default import (
     delete_message_messages_message_id_delete,
@@ -25,21 +27,21 @@ class ServiceClient(Client):
         """
         self.client = GeneratedClient(base_url=base_url)
 
-    def get_messages(self, max_results: int = 10) -> list[Message]:
+    def get_messages(self, max_results: int = 10) -> Iterator[Message]:
         """Retrieve a list of messages.
 
         Args:
             max_results: Maximum number of messages to retrieve.
 
         Returns:
-            List of message objects.
+            Iterator of message objects.
 
         """
         result = get_messages_messages_get.sync(client=self.client, max_results=max_results)
         if not result or not isinstance(result, list):
-            return []
+            return iter([])
         # Type ignore because the generated client returns MessageSummary but we need Message
-        return result  # type: ignore[return-value]
+        return iter(result)  # type: ignore[arg-type, return-value]
 
     def get_message(self, message_id: str) -> Message:
         """Retrieve a single message by ID.
