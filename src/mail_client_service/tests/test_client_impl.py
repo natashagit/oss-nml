@@ -32,7 +32,7 @@ def test_get_messages_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") 
     ]
     monkeypatch.setattr(
         get_messages_messages_get, "sync",
-        lambda **kwargs: mock_resp,
+        lambda **_kwargs: mock_resp,
     )
 
     svc = ServiceClient()
@@ -55,7 +55,7 @@ def test_get_message_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") -
     )
     monkeypatch.setattr(
         get_message_messages_message_id_get, "sync",
-        lambda **kwargs: mock_resp,
+        lambda **_kwargs: mock_resp,
     )
 
     svc = ServiceClient()
@@ -73,7 +73,7 @@ def test_delete_message_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") ->
 
     monkeypatch.setattr(
         delete_message_messages_message_id_delete, "sync",
-        lambda **kwargs: FakeResp(),
+        lambda **_kwargs: FakeResp(),
     )
 
     svc = ServiceClient()
@@ -87,7 +87,7 @@ def test_delete_message_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch")
 
     monkeypatch.setattr(
         delete_message_messages_message_id_delete, "sync",
-        lambda **kwargs: FakeResp(),
+        lambda **_kwargs: FakeResp(),
     )
 
     svc = ServiceClient()
@@ -101,7 +101,7 @@ def test_mark_as_read_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") -> N
 
     monkeypatch.setattr(
         mark_message_as_read_messages_message_id_mark_as_read_post, "sync",
-        lambda **kwargs: FakeResp(),
+        lambda **_kwargs: FakeResp(),
     )
 
     svc = ServiceClient()
@@ -115,7 +115,7 @@ def test_mark_as_read_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch") -
 
     monkeypatch.setattr(
         mark_message_as_read_messages_message_id_mark_as_read_post, "sync",
-        lambda **kwargs: FakeResp(),
+        lambda **_kwargs: FakeResp(),
     )
 
     svc = ServiceClient()
