@@ -29,7 +29,7 @@ def _check_credentials_exist(main_script: Path) -> None:
         pytest.skip("No credentials.json or token.json found - cannot run E2E test")
 
 
-def _start_fastapi_server(main_script: Path) -> subprocess.Popen:
+def _start_fastapi_server(main_script: Path) -> "subprocess.Popen[str]":
     """Start the FastAPI server in the background."""
     return subprocess.Popen(  # noqa: S603
         [sys.executable, "-m", "uvicorn", "mail_client_service.main:app", "--host", "127.0.0.1", "--port", "8000"],
@@ -40,7 +40,7 @@ def _start_fastapi_server(main_script: Path) -> subprocess.Popen:
     )
 
 
-def _verify_server_started(server_process: subprocess.Popen) -> None:
+def _verify_server_started(server_process: "subprocess.Popen[str]") -> None:
     """Verify the server started successfully."""
     time.sleep(3)
     if server_process.poll() is not None:
@@ -48,7 +48,7 @@ def _verify_server_started(server_process: subprocess.Popen) -> None:
         pytest.fail(f"FastAPI server failed to start.\nStdout: {stdout}\nStderr: {stderr}")
 
 
-def _stop_fastapi_server(server_process: subprocess.Popen) -> None:
+def _stop_fastapi_server(server_process: "subprocess.Popen[str]") -> None:
     """Stop the FastAPI server gracefully."""
     server_process.terminate()
     try:
