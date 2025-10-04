@@ -55,7 +55,8 @@ class ServiceClient(Client):
         """
         result = get_message_messages_message_id_get.sync(client=self.client, message_id=message_id)
         if result is None:
-            raise ValueError(f"Message {message_id} not found")
+            msg = f"Message {message_id} not found"
+            raise ValueError(msg)
         return result
 
     def delete_message(self, message_id: str) -> bool:
