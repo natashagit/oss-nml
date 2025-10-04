@@ -25,7 +25,7 @@ def test_get_messages_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") 
         MessageSummary(
             id="1",
             from_="a@test.com",
-            to=["b@test.com"],
+            to="b@test.com",
             date="2024-01-01",
             subject="Hi",
         ),
@@ -48,7 +48,7 @@ def test_get_message_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") -
     mock_resp = MessageDetail(
         id="123",
         from_="a@test.com",
-        to=["b@test.com"],
+        to="b@test.com",
         date="2024-01-01",
         subject="Hello",
         body="This is a test message",
