@@ -38,7 +38,7 @@ class ServiceClient(Client):
 
         """
         result = get_messages_messages_get.sync(client=self.client, max_results=max_results)
-        return list(result) if result else []
+        return iter(list(result) if result else [])
 
     def get_message(self, message_id: str) -> Message:
         """Retrieve a single message by ID.
@@ -72,7 +72,7 @@ class ServiceClient(Client):
         resp = delete_message_messages_message_id_delete.sync(
             client=self.client, message_id=message_id,
         )
-        return getattr(resp, "status", None) == "ok"
+        return getattr(resp, "success", False)
 
     def mark_as_read(self, message_id: str) -> bool:
         """Mark a message as read.
@@ -87,7 +87,7 @@ class ServiceClient(Client):
         resp = mark_message_as_read_messages_message_id_mark_as_read_post.sync(
             client=self.client, message_id=message_id,
         )
-        return getattr(resp, "status", None) == "ok"
+        return getattr(resp, "success", False)
 
     def get_client(self) -> GeneratedClient:
         """Get the underlying generated client.
