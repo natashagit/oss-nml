@@ -168,7 +168,7 @@ class ServiceClient(Client):
             client=self.client,
             message_id=message_id,
         )
-        return getattr(resp, "status", None) == "ok"
+        return getattr(resp, "success", False)
 
     def mark_as_read(self, message_id: str) -> bool:
         """Mark a message as read.
@@ -184,7 +184,7 @@ class ServiceClient(Client):
             client=self.client,
             message_id=message_id,
         )
-        return getattr(resp, "status", None) == "ok"
+        return getattr(resp, "success", False)
 
     def get_client(self) -> GeneratedClient:
         """Get the underlying generated client.

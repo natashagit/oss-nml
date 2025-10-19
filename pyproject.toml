@@ -48,7 +48,6 @@ explicit_package_bases = true # Required for src layout
 mypy_path = ["src/mail_client_api/src", "src/gmail_client_impl/src", "src/mail_client_service/src", "src/mail_client_adapter/src", "src/mail_client_service_client"]
 ignore_missing_imports = false
 warn_unused_ignores = false
-exclude = ["^src/[^/]+/src/"]
 
 # Allow untyped imports for specific modules
 [[tool.mypy.overrides]]
