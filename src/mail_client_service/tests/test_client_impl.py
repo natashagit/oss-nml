@@ -3,7 +3,11 @@
 # Import the ServiceClient from mail_client_adapter
 from typing import TYPE_CHECKING
 
-from mail_client_adapter.client_impl import ServiceClient
+from mail_client_adapter.client_impl import (
+    MessageDetailAdapter,
+    MessageSummaryAdapter,
+    ServiceClient,
+)
 from mail_client_service_client.api.default import (
     delete_message_messages_message_id_delete,
     get_message_messages_message_id_get,
@@ -31,15 +35,16 @@ def test_get_messages_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") 
         ),
     ]
     monkeypatch.setattr(
-        get_messages_messages_get, "sync",
+        get_messages_messages_get,
+        "sync",
         lambda **_kwargs: mock_resp,
     )
 
     svc = ServiceClient()
-    resp = svc.get_messages(max_results=5)
+    resp = list(svc.get_messages(max_results=5))
 
     assert isinstance(resp, list)
-    assert isinstance(resp[0], MessageSummary)
+    assert isinstance(resp[0], MessageSummaryAdapter)
     assert resp[0].subject == "Hi"
 
 
@@ -54,25 +59,28 @@ def test_get_message_calls_generated_client(monkeypatch: "pytest.MonkeyPatch") -
         body="This is a test message",
     )
     monkeypatch.setattr(
-        get_message_messages_message_id_get, "sync",
+        get_message_messages_message_id_get,
+        "sync",
         lambda **_kwargs: mock_resp,
     )
 
     svc = ServiceClient()
     resp = svc.get_message("123")
 
-    assert isinstance(resp, MessageDetail)
+    assert isinstance(resp, MessageDetailAdapter)
     assert resp.id == "123"
     assert resp.subject == "Hello"
 
 
 def test_delete_message_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") -> None:
     """Test that delete_message returns True when status is ok."""
+
     class FakeResp:
         status = "ok"
 
     monkeypatch.setattr(
-        delete_message_messages_message_id_delete, "sync",
+        delete_message_messages_message_id_delete,
+        "sync",
         lambda **_kwargs: FakeResp(),
     )
 
@@ -82,11 +90,13 @@ def test_delete_message_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") ->
 
 def test_delete_message_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch") -> None:
     """Test that delete_message returns False when status is error."""
+
     class FakeResp:
         status = "error"
 
     monkeypatch.setattr(
-        delete_message_messages_message_id_delete, "sync",
+        delete_message_messages_message_id_delete,
+        "sync",
         lambda **_kwargs: FakeResp(),
     )
 
@@ -96,11 +106,13 @@ def test_delete_message_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch")
 
 def test_mark_as_read_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") -> None:
     """Test that mark_as_read returns True when status is ok."""
+
     class FakeResp:
         status = "ok"
 
     monkeypatch.setattr(
-        mark_message_as_read_messages_message_id_mark_as_read_post, "sync",
+        mark_message_as_read_messages_message_id_mark_as_read_post,
+        "sync",
         lambda **_kwargs: FakeResp(),
     )
 
@@ -110,11 +122,13 @@ def test_mark_as_read_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") -> N
 
 def test_mark_as_read_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch") -> None:
     """Test that mark_as_read returns False when status is error."""
+
     class FakeResp:
         status = "error"
 
     monkeypatch.setattr(
-        mark_message_as_read_messages_message_id_mark_as_read_post, "sync",
+        mark_message_as_read_messages_message_id_mark_as_read_post,
+        "sync",
         lambda **_kwargs: FakeResp(),
     )
 

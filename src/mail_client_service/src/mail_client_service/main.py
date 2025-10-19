@@ -77,7 +77,8 @@ def get_message(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=404, detail=f"Message {message_id} not found: {e!s}",
+            status_code=404,
+            detail=f"Message {message_id} not found: {e!s}",
         ) from e
 
 
@@ -104,7 +105,8 @@ def mark_message_as_read(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to mark message as read: {e!s}",
+            status_code=500,
+            detail=f"Failed to mark message as read: {e!s}",
         ) from e
 
 
@@ -131,7 +133,8 @@ def delete_message(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to delete message: {e!s}",
+            status_code=500,
+            detail=f"Failed to delete message: {e!s}",
         ) from e
 
 

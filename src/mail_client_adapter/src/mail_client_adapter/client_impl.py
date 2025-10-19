@@ -22,9 +22,10 @@ class MessageSummaryAdapter(Message):
 
     def __init__(self, message_summary: MessageSummary) -> None:
         """Initialize the adapter with a MessageSummary instance.
-        
+
         Args:
             message_summary: The MessageSummary instance to wrap.
+
         """
         self._message_summary = message_summary
 
@@ -56,7 +57,7 @@ class MessageSummaryAdapter(Message):
     @property
     def body(self) -> str:
         """Return the plain text content of the message.
-        
+
         Note: MessageSummary doesn't include body, so we return an empty string.
         """
         return ""
@@ -67,9 +68,10 @@ class MessageDetailAdapter(Message):
 
     def __init__(self, message_detail: MessageDetail) -> None:
         """Initialize the adapter with a MessageDetail instance.
-        
+
         Args:
             message_detail: The MessageDetail instance to wrap.
+
         """
         self._message_detail = message_detail
 
@@ -163,7 +165,8 @@ class ServiceClient(Client):
 
         """
         resp = delete_message_messages_message_id_delete.sync(
-            client=self.client, message_id=message_id,
+            client=self.client,
+            message_id=message_id,
         )
         return getattr(resp, "status", None) == "ok"
 
@@ -178,7 +181,8 @@ class ServiceClient(Client):
 
         """
         resp = mark_message_as_read_messages_message_id_mark_as_read_post.sync(
-            client=self.client, message_id=message_id,
+            client=self.client,
+            message_id=message_id,
         )
         return getattr(resp, "status", None) == "ok"
 
@@ -190,4 +194,3 @@ class ServiceClient(Client):
 
         """
         return self.client
-

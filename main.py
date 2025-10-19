@@ -5,8 +5,8 @@
 import contextlib
 import logging
 
-import mail_client_api
 import mail_client_adapter  # noqa: F401  # register the service adapter
+import mail_client_api
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Initialize the client and demonstrate all mail client methods."""
-    client = mail_client_api.get_client(interactive=False)
+    client = mail_client_api.get_client()
 
     # Test 1: Get messages (existing functionality)
     messages = list(client.get_messages(max_results=3))

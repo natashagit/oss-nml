@@ -44,7 +44,14 @@ def mock_client() -> Generator[MagicMock, None, None]:
 def test_get_messages(mock_client: Any) -> None:
     """Test GET /messages returns a list of message summaries."""
     mock_client.get_messages.return_value = [
-        MagicMock(id="m1", subject="Hello", from_="x@y.com", to="y@z.com", date="2025-10-01", body="Hi"),
+        MagicMock(
+            id="m1",
+            subject="Hello",
+            from_="x@y.com",
+            to="y@z.com",
+            date="2025-10-01",
+            body="Hi",
+        ),
     ]
 
     resp = client.get("/messages")
@@ -61,7 +68,12 @@ def test_get_messages(mock_client: Any) -> None:
 def test_get_single_message(mock_client: Any) -> None:
     """Test GET /messages/{id} returns full message detail."""
     mock_client.get_message.return_value = MagicMock(
-        id="m1", subject="UnitTest", from_="a@b.com", to="z@b.com", date="2025-10-01", body="Body text",
+        id="m1",
+        subject="UnitTest",
+        from_="a@b.com",
+        to="z@b.com",
+        date="2025-10-01",
+        body="Body text",
     )
 
     resp = client.get("/messages/m1")
