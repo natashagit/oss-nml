@@ -26,7 +26,7 @@ def test_get_client_and_authenticate() -> None:
     """
     try:
         # 1. Get the client using the abstract factory
-        client = mail_client_api.get_client(interactive=False)
+        client = mail_client_api.get_client(interactive=True)
 
         # 2. Assert that we received the correct implementation
         assert isinstance(client, gmail_client_impl.GmailClient)
@@ -48,7 +48,7 @@ def test_dependency_injection_works() -> None:
     This test doesn't require credentials, only tests imports and factory setup.
     """
     try:
-        client = mail_client_api.get_client(interactive=False)
+        client = mail_client_api.get_client(interactive=True)
         assert isinstance(client, gmail_client_impl.GmailClient)
         assert hasattr(client, "get_messages")
         assert hasattr(client, "get_message")
@@ -101,7 +101,7 @@ def test_factory_functions_work_together() -> None:
 def test_client_scope_permissions() -> None:
     """Tests that the client has the necessary OAuth scopes for the operations we want to perform."""
     try:
-        client = mail_client_api.get_client(interactive=False)
+        client = mail_client_api.get_client(interactive=True)
 
         # Cast to GmailClient to access service attribute
         gmail_client = client
@@ -139,12 +139,12 @@ def test_client_initialization_modes() -> None:
     This test checks initialization behavior, not actual authentication.
     """
     try:
-        # Test non-interactive mode (default)
-        client1 = mail_client_api.get_client(interactive=False)
+        # Test interactive mode
+        client1 = mail_client_api.get_client(interactive=True)
         assert isinstance(client1, gmail_client_impl.GmailClient)
 
         # Test that we can create multiple instances
-        client2 = mail_client_api.get_client(interactive=False)
+        client2 = mail_client_api.get_client(interactive=True)
         assert isinstance(client2, gmail_client_impl.GmailClient)
 
         # They should be separate instances
