@@ -5,7 +5,7 @@ import mail_client_api
 from .client_impl import MessageDetailAdapter, MessageSummaryAdapter, ServiceClient
 
 
-def get_client_impl() -> mail_client_api.Client:
+def get_client_impl(*, interactive: bool = False) -> mail_client_api.Client:
     """Return a configured ServiceClient instance."""
     return ServiceClient()
 
@@ -24,4 +24,4 @@ __all__ = ["MessageDetailAdapter", "MessageSummaryAdapter", "ServiceClient", "ge
 
 
 # Dependency Injection happens at import time
-register()
+# register()  # Commented out to prevent automatic registration

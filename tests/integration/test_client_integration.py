@@ -11,6 +11,9 @@ import pytest
 import gmail_client_impl  # Import to trigger dependency injection
 import mail_client_api
 
+# Ensure Gmail client is registered (in case adapter was imported first)
+gmail_client_impl.register()
+
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration
 
