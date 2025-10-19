@@ -5,8 +5,11 @@
 import contextlib
 import logging
 
-import mail_client_adapter  # noqa: F401  # register the service adapter
+import mail_client_adapter
 import mail_client_api
+
+# Register the service adapter
+mail_client_adapter.register()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -76,7 +76,7 @@ def test_delete_message_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") ->
     """Test that delete_message returns True when status is ok."""
 
     class FakeResp:
-        status = "ok"
+        success = True
 
     monkeypatch.setattr(
         delete_message_messages_message_id_delete,
@@ -92,7 +92,7 @@ def test_delete_message_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch")
     """Test that delete_message returns False when status is error."""
 
     class FakeResp:
-        status = "error"
+        success = False
 
     monkeypatch.setattr(
         delete_message_messages_message_id_delete,
@@ -108,7 +108,7 @@ def test_mark_as_read_returns_true_on_ok(monkeypatch: "pytest.MonkeyPatch") -> N
     """Test that mark_as_read returns True when status is ok."""
 
     class FakeResp:
-        status = "ok"
+        success = True
 
     monkeypatch.setattr(
         mark_message_as_read_messages_message_id_mark_as_read_post,
@@ -124,7 +124,7 @@ def test_mark_as_read_returns_false_on_fail(monkeypatch: "pytest.MonkeyPatch") -
     """Test that mark_as_read returns False when status is error."""
 
     class FakeResp:
-        status = "error"
+        success = False
 
     monkeypatch.setattr(
         mark_message_as_read_messages_message_id_mark_as_read_post,
