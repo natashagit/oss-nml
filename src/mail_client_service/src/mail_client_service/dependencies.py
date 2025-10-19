@@ -2,12 +2,15 @@
 
 from collections.abc import Callable
 
-from mail_client_api import Client, get_client
+import gmail_client_impl  # Import to ensure Gmail client is available
+from mail_client_api import Client
 
 
 # Global client factory - can be overridden for testing
 def _client_factory() -> Client:
-    return get_client(interactive=False)
+    # Use Gmail client directly instead of going through dependency injection
+    # This prevents circular dependency where service would call itself
+    return gmail_client_impl.GmailClient(interactive=True)
 
 
 def get_mail_client() -> Client:
