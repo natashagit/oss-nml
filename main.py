@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Initialize the client and demonstrate all mail client methods."""
-    client = mail_client_api.get_client(interactive=True)
+    client = mail_client_api.get_client(interactive=False)
 
     # Test 1: Get messages (existing functionality)
     messages = list(client.get_messages(max_results=3))
