@@ -11,8 +11,97 @@ from mail_client_service_client.api.default import (
     mark_message_as_read_messages_message_id_mark_as_read_post,
 )
 from mail_client_service_client.client import Client as GeneratedClient
+from mail_client_service_client.models.message_detail import MessageDetail
+from mail_client_service_client.models.message_summary import MessageSummary
 
 from mail_client_api import Client
+
+
+class MessageSummaryAdapter(Message):
+    """Adapter that wraps MessageSummary to implement the Message ABC interface."""
+
+    def __init__(self, message_summary: MessageSummary) -> None:
+        """Initialize the adapter with a MessageSummary instance.
+        
+        Args:
+            message_summary: The MessageSummary instance to wrap.
+        """
+        self._message_summary = message_summary
+
+    @property
+    def id(self) -> str:
+        """Return the unique identifier of the message."""
+        return self._message_summary.id
+
+    @property
+    def from_(self) -> str:
+        """Return the sender's email address."""
+        return self._message_summary.from_
+
+    @property
+    def to(self) -> str:
+        """Return the recipient's email address."""
+        return self._message_summary.to
+
+    @property
+    def date(self) -> str:
+        """Return the date the message was sent."""
+        return self._message_summary.date
+
+    @property
+    def subject(self) -> str:
+        """Return the subject line of the message."""
+        return self._message_summary.subject
+
+    @property
+    def body(self) -> str:
+        """Return the plain text content of the message.
+        
+        Note: MessageSummary doesn't include body, so we return an empty string.
+        """
+        return ""
+
+
+class MessageDetailAdapter(Message):
+    """Adapter that wraps MessageDetail to implement the Message ABC interface."""
+
+    def __init__(self, message_detail: MessageDetail) -> None:
+        """Initialize the adapter with a MessageDetail instance.
+        
+        Args:
+            message_detail: The MessageDetail instance to wrap.
+        """
+        self._message_detail = message_detail
+
+    @property
+    def id(self) -> str:
+        """Return the unique identifier of the message."""
+        return self._message_detail.id
+
+    @property
+    def from_(self) -> str:
+        """Return the sender's email address."""
+        return self._message_detail.from_
+
+    @property
+    def to(self) -> str:
+        """Return the recipient's email address."""
+        return self._message_detail.to
+
+    @property
+    def date(self) -> str:
+        """Return the date the message was sent."""
+        return self._message_detail.date
+
+    @property
+    def subject(self) -> str:
+        """Return the subject line of the message."""
+        return self._message_detail.subject
+
+    @property
+    def body(self) -> str:
+        """Return the plain text content of the message."""
+        return self._message_detail.body
 
 
 class ServiceClient(Client):
@@ -38,7 +127,11 @@ class ServiceClient(Client):
 
         """
         result = get_messages_messages_get.sync(client=self.client, max_results=max_results)
-        return list(result) if result else []
+        if result:
+            for message_summary in result:
+                yield MessageSummaryAdapter(message_summary)
+        else:
+            return iter([])
 
     def get_message(self, message_id: str) -> Message:
         """Retrieve a single message by ID.
@@ -57,7 +150,7 @@ class ServiceClient(Client):
         if result is None:
             msg = f"Message {message_id} not found"
             raise ValueError(msg)
-        return result
+        return MessageDetailAdapter(result)
 
     def delete_message(self, message_id: str) -> bool:
         """Delete a message by ID.
