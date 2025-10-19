@@ -19,7 +19,7 @@ app = FastAPI(
 @app.get("/messages")
 def get_messages(
     max_results: Annotated[int, Query(ge=1, le=100)] = 10,
-    client: Annotated[Client, Depends(get_mail_client)] = None,
+    client: Client = Depends(get_mail_client),
 ) -> list[MessageSummary]:
     """Fetch a list of message summaries.
 
@@ -36,7 +36,7 @@ def get_messages(
         return [
             MessageSummary(
                 id=msg.id,
-                from_=msg.from_,
+                **{"from": msg.from_},
                 to=msg.to,
                 date=msg.date,
                 subject=msg.subject,
@@ -69,7 +69,7 @@ def get_message(
         msg = client.get_message(message_id)
         return MessageDetail(
             id=msg.id,
-            from_=msg.from_,
+            **{"from": msg.from_},
             to=msg.to,
             date=msg.date,
             subject=msg.subject,

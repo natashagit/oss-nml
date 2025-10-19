@@ -129,11 +129,9 @@ class ServiceClient(Client):
 
         """
         result = get_messages_messages_get.sync(client=self.client, max_results=max_results)
-        if result:
+        if result and isinstance(result, list):
             for message_summary in result:
                 yield MessageSummaryAdapter(message_summary)
-        else:
-            return iter([])
 
     def get_message(self, message_id: str) -> Message:
         """Retrieve a single message by ID.
@@ -149,7 +147,7 @@ class ServiceClient(Client):
 
         """
         result = get_message_messages_message_id_get.sync(client=self.client, message_id=message_id)
-        if result is None:
+        if result is None or not isinstance(result, MessageDetail):
             msg = f"Message {message_id} not found"
             raise ValueError(msg)
         return MessageDetailAdapter(result)
