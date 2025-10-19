@@ -5,8 +5,13 @@ import mail_client_api
 from .client_impl import MessageDetailAdapter, MessageSummaryAdapter, ServiceClient
 
 
-def get_client_impl(*, interactive: bool = False) -> mail_client_api.Client:
-    """Return a configured ServiceClient instance."""
+def get_client_impl(*, interactive: bool = False) -> mail_client_api.Client:  # noqa: ARG001
+    """Return a configured ServiceClient instance.
+
+    Args:
+        interactive: Unused parameter, kept for API compatibility.
+
+    """
     return ServiceClient()
 
 
