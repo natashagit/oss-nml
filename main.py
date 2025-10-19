@@ -8,13 +8,16 @@ import logging
 import mail_client_adapter  # noqa: F401  # register the service adapter
 import mail_client_api
 
+# Explicitly register the adapter for the main application
+mail_client_adapter.register()
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
     """Initialize the client and demonstrate all mail client methods."""
-    client = mail_client_api.get_client()
+    client = mail_client_api.get_client(interactive=True)
 
     # Test 1: Get messages (existing functionality)
     messages = list(client.get_messages(max_results=3))
