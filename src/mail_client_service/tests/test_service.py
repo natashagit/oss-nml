@@ -145,3 +145,22 @@ def test_get_mail_client_dependency(monkeypatch: Any) -> None:
 
     client_obj = deps.get_mail_client()
     assert client_obj is fake_client
+
+
+def test_dependencies_authentication_failure(monkeypatch: Any) -> None:
+    """Test that dependencies raise HTTPException when Gmail client fails."""
+    import mail_client_service.dependencies as deps
+    from unittest.mock import patch
+    from fastapi import HTTPException
+    
+    # Mock the get_client function to raise exceptions
+    with patch('mail_client_service.dependencies.get_client') as mock_get_client:
+        # Make it raise RuntimeError
+        mock_get_client.side_effect = RuntimeError("No valid credentials found")
+        
+        # This should raise HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            deps.get_mail_client()
+        
+        assert exc_info.value.status_code == 503
+        assert "Gmail credentials not configured" in exc_info.value.detail

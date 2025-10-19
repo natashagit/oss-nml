@@ -17,9 +17,24 @@ def get_mail_client() -> Client:
 
     Returns:
         Client: An instance of the mail client.
+        
+    Raises:
+        HTTPException: If client initialization fails due to missing credentials.
 
     """
-    return _client_factory()
+    try:
+        return _client_factory()
+    except (FileNotFoundError, RuntimeError) as e:
+        from fastapi import HTTPException
+        if "No valid credentials found" in str(e) or "credentials.json" in str(e):
+            raise HTTPException(
+                status_code=503, 
+                detail="Mail service unavailable: Gmail credentials not configured. Please configure Gmail authentication."
+            ) from e
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to initialize mail client: {e!s}"
+        ) from e
 
 
 def set_client_factory(factory: Callable[[], Client]) -> None:
