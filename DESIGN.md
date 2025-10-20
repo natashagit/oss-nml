@@ -612,195 +612,24 @@ Response: 422 Unprocessable Entity
 
 ## The Adapter Pattern
 
-### Why It's Needed
+### Why we need it
 
-**The Problem**: The auto-generated client doesn't match the original `mail_client_api.Client` interface.
+The auto-generated HTTP client does not match the original Client interface: The original world exposes class methods like “get_messages” and returns Message objects or booleans.
 
-**Original Interface** (`mail_client_api.Client`):
-```python
-class Client(ABC):
-    @abstractmethod
-    def get_messages(self, max_results: int = 10) -> Iterator[Message]:
-        raise NotImplementedError
-    
-    @abstractmethod
-    def get_message(self, message_id: str) -> Message:
-        raise NotImplementedError
-    
-    @abstractmethod
-    def delete_message(self, message_id: str) -> bool:
-        raise NotImplementedError
-    
-    @abstractmethod
-    def mark_as_read(self, message_id: str) -> bool:
-        raise NotImplementedError
-```
+The generated world exposes HTTP-style functions and returns simple models linked to endpoints.
 
-**Generated Client API**:
-```python
-from mail_client_service_client.api.default import (
-    get_messages_messages_get,
-    get_message_messages_message_id_get,
-    delete_message_messages_message_id_delete,
-    mark_message_as_read_messages_message_id_mark_as_read_post,
-)
+### What the adapter does
 
-# Usage:
-client = Client(base_url="http://localhost:8000")
-messages = get_messages_messages_get.sync(client=client, max_results=10)
-```
+It implements the original Client interface. Inside, it uses the generated HTTP client to call the service, and then it translates parameters and turns the service’s models into the types the original interface expects. Therefore it keeps method names and behavior the same, so calling code does not change.
 
-**Key Mismatches**:
+### What changes for application developers
 
-1. **Function-based vs. Class-based**:
-   - Original: Methods on a `Client` class
-   - Generated: Standalone functions that take a `Client` argument
+Only how you construct the client:
 
-2. **Return Types**:
-   - Original: Returns `Iterator[Message]` and `Message` objects
-   - Generated: Returns `List[MessageSummary]` and `MessageDetail` Pydantic models
+Library mode: build the original Client directly from the library.
 
-3. **Method Signatures**:
-   - Original: `delete_message(message_id: str) -> bool`
-   - Generated: `delete_message_messages_message_id_delete.sync(client, message_id) -> OperationResponse`
-
-4. **Naming Conventions**:
-   - Original: Clean method names like `get_messages`
-   - Generated: HTTP-path-based names like `get_messages_messages_get`
-
-**The Goal**: User code should look **identical** whether using the library or the service.
-
-> "The customer can be clueless as to whether they're consuming the functionality as a library or as a service. Where the code runs is merely geography."
-> — Prof. Kamen
-
-### How It Works
-
-The **adapter** (`ServiceClient`) acts as a translator between the two APIs.
-
-**Complete Implementation**:
-
-```python
-# src/mail_client_adapter/src/mail_client_adapter/client_impl.py
-
-from collections.abc import Iterator
-from mail_client_api import Client
-from mail_client_api.message import Message
-from mail_client_service_client.client import Client as GeneratedClient
-from mail_client_service_client.api.default import (
-    delete_message_messages_message_id_delete,
-    get_message_messages_message_id_get,
-    get_messages_messages_get,
-    mark_message_as_read_messages_message_id_mark_as_read_post,
-)
-
-
-class ServiceClient(Client):
-    """Adapter that implements Client interface using the generated service client."""
-
-    def __init__(self, base_url: str = "http://127.0.0.1:8000") -> None:
-        """Initialize the adapter with the service URL."""
-        self.client = GeneratedClient(base_url=base_url)
-
-    def get_messages(self, max_results: int = 10) -> Iterator[Message]:
-        """Fetch messages by delegating to the generated client."""
-        result = get_messages_messages_get.sync(
-            client=self.client, 
-            max_results=max_results
-        )
-        return list(result) if result else []
-
-    def get_message(self, message_id: str) -> Message:
-        """Fetch a single message by delegating to the generated client."""
-        result = get_message_messages_message_id_get.sync(
-            client=self.client, 
-            message_id=message_id
-        )
-        if result is None:
-            raise ValueError(f"Message {message_id} not found")
-        return result
-
-    def delete_message(self, message_id: str) -> bool:
-        """Delete a message and return success status."""
-        resp = delete_message_messages_message_id_delete.sync(
-            client=self.client, 
-            message_id=message_id
-        )
-        return getattr(resp, "success", False)
-
-    def mark_as_read(self, message_id: str) -> bool:
-        """Mark message as read and return success status."""
-        resp = mark_message_as_read_messages_message_id_mark_as_read_post.sync(
-            client=self.client, 
-            message_id=message_id
-        )
-        return getattr(resp, "success", False)
-```
-
-**What the Adapter Does**:
-
-1. **Inherits from `Client` ABC**: Satisfies type checking and enforces implementation
-2. **Wraps the generated client**: Holds a `GeneratedClient` instance internally
-3. **Delegates method calls**: Translates clean method calls to verbose generated function calls
-4. **Transforms return types**: Converts Pydantic models to expected return types
-5. **Maintains the same signatures**: Methods match the original interface exactly
-
-### User Code Example
-
-**Using the Original Library** (before):
-
-```python
-import mail_client_api
-import gmail_client_impl  # Triggers dependency injection
-
-# Get client (runs locally, uses Gmail directly)
-client = mail_client_api.get_client(interactive=False)
-
-# Use the client
-messages = list(client.get_messages(max_results=5))
-for msg in messages:
-    print(f"{msg.subject} from {msg.from_}")
-
-# Get specific message
-message = client.get_message(messages[0].id)
-print(f"Body: {message.body}")
-
-# Mark as read
-success = client.mark_as_read(messages[0].id)
-print(f"Marked as read: {success}")
-
-# Delete message
-success = client.delete_message(messages[0].id)
-print(f"Deleted: {success}")
-```
-
-**Using the Service Through Adapter** (after):
-
-```python
-from mail_client_adapter.client_impl import ServiceClient
-
-# Get client (communicates with service over HTTP)
-client = ServiceClient(base_url="http://localhost:8000")
-
-# Use the client - IDENTICAL CODE!
-messages = list(client.get_messages(max_results=5))
-for msg in messages:
-    print(f"{msg.subject} from {msg.from_}")
-
-# Get specific message
-message = client.get_message(messages[0].id)
-print(f"Body: {message.body}")
-
-# Mark as read
-success = client.mark_as_read(messages[0].id)
-print(f"Marked as read: {success}")
-
-# Delete message
-success = client.delete_message(messages[0].id)
-print(f"Deleted: {success}")
-```
-
-**Key Observation**: The only difference is **how the client is created**. After that, the code is **100% identical**. The user doesn't need to know whether they're using a library or a service!
-
+Service mode: build the adapter and give it the service base URL.
+Everything else in your app can remain the same.
 ---
 
 ## Testing Strategy
@@ -852,33 +681,7 @@ The test suite uses **unit tests** for the service layer:
 
 **Example**: Testing service endpoint with mock
 
-```python
-@pytest.fixture
-def mock_client() -> Generator[MagicMock, None, None]:
-    """Create a MagicMock Gmail client and override the dependency."""
-    mock_instance = MagicMock()
-    app.dependency_overrides[get_mail_client] = lambda: mock_instance
-    yield mock_instance
-    app.dependency_overrides.clear()
 
-
-def test_get_messages(mock_client: Any) -> None:
-    """Test GET /messages returns a list of message summaries."""
-    mock_client.get_messages.return_value = [
-        MagicMock(id="m1", subject="Hello", from_="x@y.com", 
-                  to="y@z.com", date="2025-10-01", body="Hi"),
-    ]
-
-    resp = client.get("/messages")
-    assert resp.status_code == HTTP_200_OK
-
-    data = resp.json()
-    assert isinstance(data, list)
-    assert data[0]["id"] == "m1"
-    assert data[0]["subject"] == "Hello"
-
-    mock_client.get_messages.assert_called_once()
-```
 
 **Why This Approach?**:
 - Fast (no real Gmail API calls)
@@ -930,14 +733,7 @@ The mocking strategy varies by test type:
 - We don't want to make real Gmail API calls in unit tests
 - We want tests to be fast and deterministic
 
-**How**:
-```python
-from unittest.mock import MagicMock
 
-mock_client = MagicMock()
-mock_client.get_messages.return_value = [mock_message]
-app.dependency_overrides[get_mail_client] = lambda: mock_client
-```
 
 **Rationale**: The service's job is to wrap the client and expose it over HTTP. By mocking the client, we verify that the service correctly delegates to it and handles responses properly. This isolates testing to HTTP layer concerns: request parsing, validation, serialization, and status codes.
 
@@ -949,20 +745,7 @@ app.dependency_overrides[get_mail_client] = lambda: mock_client
 5. Error message formatting
 6. Dependency injection mechanism
 
-**Example Test Pattern**:
-```python
-def test_get_messages(mock_client: Any) -> None:
-    # Arrange: Configure mock behavior
-    mock_client.get_messages.return_value = [mock_message]
-    
-    # Act: Make HTTP request
-    response = client.get("/messages?max_results=5")
-    
-    # Assert: Verify HTTP response and mock calls
-    assert response.status_code == 200
-    assert len(response.json()) == 1
-    mock_client.get_messages.assert_called_once_with(max_results=5)
-```
+
 
 ### Interface Compliance
 
@@ -1023,45 +806,9 @@ assert callable(adapter.mark_as_read)
 - Both return boolean values for operations
 - Both raise appropriate exceptions for errors
 
-**Example Verification**:
-```python
-# Both should have same method signatures
-original = gmail_client_impl.GmailClient(...)
-adapter = ServiceClient(base_url="http://localhost:8000")
-
-# Both return Iterator[Message]
-messages_orig = original.get_messages(max_results=5)
-messages_adapt = adapter.get_messages(max_results=5)
-
-# Both have same properties
-for msg in [messages_orig[0], messages_adapt[0]]:
-    assert hasattr(msg, "id")
-    assert hasattr(msg, "from_")
-    assert hasattr(msg, "to")
-    assert hasattr(msg, "subject")
-    assert hasattr(msg, "body")
-```
 
 #### Approach 4: Implementation Inheritance
 
-**How**: `ServiceClient` directly inherits from `Client` ABC
-
-```python
-class ServiceClient(Client):
-    """Adapter that implements Client interface."""
-    
-    def get_messages(self, max_results: int = 10) -> Iterator[Message]:
-        # Implementation
-    
-    def get_message(self, message_id: str) -> Message:
-        # Implementation
-    
-    def delete_message(self, message_id: str) -> bool:
-        # Implementation
-    
-    def mark_as_read(self, message_id: str) -> bool:
-        # Implementation
-```
 
 **What this ensures**:
 - Python's ABC mechanism prevents instantiation if methods are missing
