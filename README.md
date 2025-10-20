@@ -21,25 +21,31 @@ This project is built on the principle of "programming integrated over time." Th
 
 The project is a `uv` workspace containing four primary packages:
 
-3.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
-4.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
+1.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
+2.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
+3. **`mail_client_service`**: A FastAPI service that wraps the `mail_client_api` interface and exposes REST endpoints (`/messages`, `/messages/{id}`, `/messages/{id}/mark-as-read`, `/messages/{id}` [DELETE]).
+4. **`mail_client_adapter`**: Wraps an auto-generated client from the OpenAPI spec (via `openapi-python-client`) and implements the `mail_client_api.Client` interface. This makes remote service calls feel identical to local library usage.
+5. **`mail_client_service_client`**: Auto-generated Python client package (produced with `openapi-python-client`) that provides strongly-typed methods for interacting with the service endpoints.
 
 ## Project Structure
 
 ```
 ta-assignment/
-├── src/                          # Source packages (uv workspace members)
-│   ├── mail_client_api/          # Abstract mail client base class (ABC)  
-│   └── gmail_client_impl/        # Gmail-specific client implementation
-├── tests/                        # Integration and E2E tests
-│   ├── integration/              # Component integration tests
-│   └── e2e/                      # End-to-end application tests
-├── docs/                         # Documentation source files
-├── .circleci/                    # CircleCI configuration
-├── main.py                       # Main application entry point
-├── pyproject.toml               # Project configuration (dependencies, tools)
-├── uv.lock                      # Locked dependency versions
-└── credentials.json             # Google OAuth credentials (local only)
+├── src/                            # Source packages (uv workspace members)
+│   ├── mail_client_api/            # Abstract mail client base class (ABC)  
+│   └── gmail_client_impl/          # Gmail-specific client implementation
+|   |__ mail_client_service/        # FastAPI web service exposing Client via REST endpoints
+|   |__ mail_client_adapter/        # Adapter wrapping auto-generated client to match Client interface
+|   |__ mail_client_service_client/ # Auto-generated client code from OpenAPI (via openapi-python-client)
+├── tests/                          # Integration and E2E tests
+│   ├── integration/                # Component integration tests
+│   └── e2e/                        # End-to-end application tests
+├── docs/                           # Documentation source files
+├── .circleci/                      # CircleCI configuration
+├── main.py                         # Main application entry point
+├── pyproject.toml                  # Project configuration (dependencies, tools)
+├── uv.lock                         # Locked dependency versions
+└── credentials.json                # Google OAuth credentials (local only)
 ```
 
 ## Project Setup
@@ -97,11 +103,35 @@ ta-assignment/
     ```
     After you approve, a `token.json` file will be created. This file is also ignored by `.gitignore` and will be used for authentication in subsequent runs.
 
+## How It Works
+
+### Service Layer (`mail_client_service`)
+FastAPI app exposes REST endpoints for the `Client` interface.  
+
+### Generated Client (`mail_client_service_client`)
+Auto-generated with `openapi-python-client`, providing strongly typed request/response methods.  
+
+### Adapter Layer (`mail_client_adapter`)
+Wraps the generated client and conforms to `mail_client_api.Client`.  
+Consumer code calls `mail_client_api.get_client()` and stays unchanged whether it uses the local Gmail implementation or the remote service.  
+
+### Demo (`main.py`)
+Demonstrates all supported operations:  
+- Fetching messages  
+- Retrieving a single message  
+- Marking as read  
+- Deleting
+
 ## Development Workflow
 
 All commands should be run from the project root with the virtual environment activated.
 
 ### Running the Application
+
+Start the FastAPI service (in one terminal):
+```bash
+uv run uvicorn mail_client_service.main:app --reload
+```
 
 To run the main demonstration script:
 ```bash
@@ -158,6 +188,7 @@ uv run python main.py
 
 ### Viewing Documentation
 
+
 This project uses MkDocs for documentation.
 ```bash
 # Start the live-reloading documentation server
@@ -204,6 +235,18 @@ The project includes a comprehensive CircleCI configuration (`.circleci/config.y
 - **Artifacts**: Coverage reports, test results, and build summaries
 
 See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
+
+## Deployment
+
+- **Containerization**:  
+  The FastAPI `mail_client_service` has been containerized with a production-ready `Dockerfile`.  
+
+- **Fly.io Deployment**:  
+  The service is deployed on **Fly.io**, with configuration managed via `fly.toml`.
+
+- **Public Endpoint**:  
+  The deployed service is available over HTTPS at:  
+  👉 [https://oss-nml.fly.dev/](https://oss-nml.fly.dev/)  
 
 ## Development Workflow
 
