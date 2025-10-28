@@ -1,0 +1,19 @@
+[project]
+name = "ai-client-api"
+version = "0.1.0"
+description = "Abstract API contract for AI client services"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend = "../../pyproject.toml"
+
+[tool.ruff.lint]
+ignore = []
