@@ -1,69 +1,79 @@
-"""Main module for demonstrating the mail client."""
+"""Main module for demonstrating the AI client."""
 
 # ta-assignment/main.py
 
 import contextlib
 import logging
 
-import mail_client_adapter
-import mail_client_api
-
-# Register the service adapter
-mail_client_adapter.register()
+import ai_client_adapter  # noqa: F401
+import ai_client_api
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Initialize the client and demonstrate all mail client methods."""
-    client = mail_client_api.get_client()
-
-    # Test 1: Get messages (existing functionality)
-    messages = list(client.get_messages(max_results=3))
-
-    if not messages:
+    """Initialize the client and demonstrate all AI client methods."""
+    # Now, get_client() returns an OpenAIClient instance...
+    user_id = "demo_user"
+    
+    try:
+        client = ai_client_api.get_client(user_id)
+        logger.info("Successfully initialized AI client")
+    except Exception as e:
+        logger.error("Failed to initialize AI client: %s", e)
+        logger.error("Exception type: %s", type(e).__name__)
+        import traceback
+        logger.error("Traceback: %s", traceback.format_exc())
+        logger.info("Make sure you have valid credentials stored for user: %s", user_id)
         return
 
-    for _i, _msg in enumerate(messages, 1):
-        pass
+    # Test 1: Chat completion (existing functionality)
+    messages = [
+        {"role": "user", "content": "Hello! Can you tell me a short joke?"}
+    ]
+    
+    try:
+        logger.info("Testing chat completion...")
+        response = client.chat_completion(messages)
+        logger.info("Chat completion response: %s", response["message"]["content"])
+    except Exception as e:
+        logger.error("Chat completion failed: %s", e)
 
-    # Test 2: Get a specific message by ID
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            client.get_message(test_message_id)
+    # Test 2: Streaming chat completion
+    streaming_messages = [
+        {"role": "user", "content": "Tell me a short story about a robot."}
+    ]
+    
+    try:
+        logger.info("Testing streaming chat completion...")
+        print("Streaming response: ", end="", flush=True)
+        for chunk in client.chat_completion_stream(streaming_messages):
+            if chunk.get("content"):
+                print(chunk["content"], end="", flush=True)
+        print()  # New line after streaming
+    except Exception as e:
+        logger.error("Streaming chat completion failed: %s", e)
 
-    # Test 3: Mark a message as read
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            success = client.mark_as_read(test_message_id)
-            if success:
-                pass
-            else:
-                pass
+    # Test 3: Different model and parameters
+    advanced_messages = [
+        {"role": "system", "content": "You are a helpful coding assistant."},
+        {"role": "user", "content": "Explain what dependency injection is in one sentence."}
+    ]
+    
+    try:
+        logger.info("Testing advanced chat completion with different parameters...")
+        response = client.chat_completion(
+            messages=advanced_messages,
+            model="gpt-3.5-turbo",
+            temperature=0.3,
+            max_tokens=100
+        )
+        logger.info("Advanced completion response: %s", response["message"]["content"])
+    except Exception as e:
+        logger.error("Advanced chat completion failed: %s", e)
 
-    # Test 4: Delete a message (WARNING: This is destructive!)
-    # Only test if we have more than one message to avoid deleting all messages
-    if len(messages) > 1:
-        # Ask for confirmation before deleting
-        delete_message_id = messages[-1].id  # Delete the last message
-        try:
-            confirmation = input("Type 'DELETE' to confirm deletion: ")
-            if confirmation == "DELETE":
-                success = client.delete_message(delete_message_id)
-                if success:
-                    logger.info("Message with ID %s deleted.", delete_message_id)
-                else:
-                    logger.info("Failed to delete message with ID %s.", delete_message_id)
-        except EOFError:
-            # This means that CircleCI or another non-interactive environment is not going to actually delete anything
-            pass
-    else:
-        pass
-
-    print("Demo complete.")  # noqa: T201
+    print("AI Client Demo complete.")  # noqa: T201
 
 
 if __name__ == "__main__":

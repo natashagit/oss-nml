@@ -1,11 +1,16 @@
 """OpenAI Client Implementation.
 
 This module provides a concrete implementation of the AI client API using OpenAI's API.
-It retrieves user-specific OpenAI API keys from the database and uses them to make
-requests to OpenAI's services.
+It retrieves user-specific OpenAI API keys from multiple sources with the following priority:
+1. Explicit openai_api_key parameter
+2. OPENAI_API_KEY environment variable
+3. Database (CredentialStore)
+
+This allows for flexible deployment scenarios while maintaining OAuth support.
 """
 
 import logging
+import os
 from collections.abc import Iterator
 from typing import Any
 
@@ -39,27 +44,45 @@ class OpenAIClient(ai_client_api.Client):
     ) -> None:
         """Initialize the OpenAIClient for a specific user.
 
+        API key is resolved in the following priority order:
+        1. Explicit openai_api_key parameter
+        2. OPENAI_API_KEY environment variable
+        3. Database (CredentialStore)
+
         Args:
             user_id: The unique identifier for the user.
             credential_store: Optional CredentialStore instance. If not provided,
                              a new one will be created.
-            openai_api_key: Optional OpenAI API key. If provided, uses this directly
-                           instead of retrieving from database. Useful for testing.
+            openai_api_key: Optional OpenAI API key. If provided, uses this directly.
+                           Useful for testing or when not using database storage.
 
         Raises:
-            ValueError: If no OpenAI API key is found for the user.
+            ValueError: If no OpenAI API key is found from any source.
         """
         self.user_id = user_id
         self.credential_store = credential_store or CredentialStore()
 
-        # Get API key from parameter or database
+        # Get API key in priority order: parameter -> environment -> database
         if openai_api_key:
             api_key = openai_api_key
+            logger.debug("Using API key from parameter for user %s", user_id)
         else:
-            api_key = self.credential_store.get_openai_api_key(user_id)
+            # Try environment variable first
+            api_key = os.getenv("OPENAI_API_KEY")
+            if api_key:
+                logger.debug("Using API key from environment variable for user %s", user_id)
+            else:
+                # Fall back to database
+                api_key = self.credential_store.get_openai_api_key(user_id)
+                if api_key:
+                    logger.debug("Using API key from database for user %s", user_id)
 
         if not api_key:
-            msg = f"No OpenAI API key found for user {user_id}"
+            msg = (
+                f"No OpenAI API key found for user {user_id}. "
+                "Please provide openai_api_key parameter, set OPENAI_API_KEY environment variable, "
+                "or configure credentials in the database."
+            )
             raise ValueError(msg)
 
         self.openai_client = OpenAI(api_key=api_key)
@@ -191,27 +214,44 @@ class OpenAIClient(ai_client_api.Client):
             raise
 
 
-def get_client_impl(user_id: str, credential_store: CredentialStore | None = None) -> ai_client_api.Client:
+def get_client_impl(
+    user_id: str,
+    credential_store: CredentialStore | None = None,
+    openai_api_key: str | None = None,
+) -> ai_client_api.Client:
     """Return a configured OpenAIClient instance for a specific user.
 
     Args:
         user_id: The unique identifier for the user.
         credential_store: Optional CredentialStore instance.
+        openai_api_key: Optional OpenAI API key. If not provided, will check
+                       environment variable and database.
 
     Returns:
         An OpenAIClient instance configured for the user.
     """
-    return OpenAIClient(user_id=user_id, credential_store=credential_store)
+    return OpenAIClient(
+        user_id=user_id,
+        credential_store=credential_store,
+        openai_api_key=openai_api_key,
+    )
 
 
-def register(credential_store: CredentialStore | None = None) -> None:
+def register(credential_store: CredentialStore | None = None, openai_api_key: str | None = None) -> None:
     """Register the OpenAI client implementation with the AI client API.
 
     Args:
         credential_store: Optional CredentialStore instance to use globally.
+        openai_api_key: Optional OpenAI API key to use globally.
+                        If not provided, will check environment variable and database.
+
     """
 
     def _get_client(user_id: str) -> ai_client_api.Client:
-        return get_client_impl(user_id=user_id, credential_store=credential_store)
+        return get_client_impl(
+            user_id=user_id,
+            credential_store=credential_store,
+            openai_api_key=openai_api_key,
+        )
 
     ai_client_api.get_client = _get_client
