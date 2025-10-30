@@ -2,6 +2,7 @@
 
 import contextlib
 import logging
+import traceback
 
 import ai_client_adapter  # noqa: F401  (auto-registers service adapter)
 import ai_client_api
@@ -14,15 +15,14 @@ def main() -> None:
     """Initialize the client and demonstrate all AI client methods."""
     # Now, get_client() returns a concrete OpenAIClient instance via auto-registration
     user_id = "demo_user"
-    
+
     try:
         client = ai_client_api.get_client(user_id)
         logger.info("Successfully initialized AI client")
     except Exception as e:
-        logger.error("Failed to initialize AI client: %s", e)
-        logger.error("Exception type: %s", type(e).__name__)
-        import traceback
-        logger.error("Traceback: %s", traceback.format_exc())
+        logger.exception("Failed to initialize AI client")
+        logger.exception("Exception type: %s", type(e).__name__)
+        logger.exception("Traceback: %s", traceback.format_exc())
         logger.info("Make sure you have valid credentials stored for user: %s", user_id)
         return
 
@@ -39,13 +39,12 @@ def main() -> None:
     with contextlib.suppress(Exception):
         for chunk in client.chat_completion_stream(streaming_messages, model="gpt-3.5-turbo-0125"):
             if chunk.get("content"):
-                print(chunk["content"], end="", flush=True)
-        print()
+                pass
 
     # Test 3: Different model and parameters
     advanced_messages = [
         {"role": "system", "content": "You are a helpful coding assistant."},
-        {"role": "user", "content": "Explain what dependency injection is in one sentence."}
+        {"role": "user", "content": "Explain what dependency injection is in one sentence."},
     ]
     logger.info("Testing advanced chat completion...")
     with contextlib.suppress(Exception):

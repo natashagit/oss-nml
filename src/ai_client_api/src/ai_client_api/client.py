@@ -27,6 +27,7 @@ class Client(ABC):
 
         Returns:
             A dictionary containing the completion response.
+
         """
         raise NotImplementedError
 
@@ -48,6 +49,7 @@ class Client(ABC):
 
         Yields:
             Chunks of the completion response as they're generated.
+
         """
         raise NotImplementedError
 
@@ -60,5 +62,6 @@ def get_client(user_id: str) -> Client:
 
     Returns:
         A configured Client instance.
+
     """
     raise NotImplementedError

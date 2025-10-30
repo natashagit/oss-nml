@@ -3,21 +3,22 @@
 from collections.abc import Iterator
 
 from ai_client_api import Client
-
 from ai_client_service_client.api.default import (
     create_chat_completion_chat_completions_post,
-    create_chat_completion_stream_chat_completions_stream_post,
 )
 from ai_client_service_client.client import Client as GeneratedClient
 from ai_client_service_client.models.chat_completion_request import ChatCompletionRequest
-from ai_client_service_client.models.chat_completion_response import ChatCompletionResponse
 from ai_client_service_client.models.chat_message import ChatMessage
 
 
 class ServiceClient(Client):
     """Client implementation that wraps the generated AI client service API."""
 
-    def __init__(self, base_url: str = "http://127.0.0.1:8000", user_id: str = "default_user") -> None:
+    def __init__(
+        self,
+        base_url: str = "http://127.0.0.1:8000",
+        user_id: str = "default_user",
+    ) -> None:
         """Initialize the service client.
 
         Args:
@@ -50,23 +51,23 @@ class ServiceClient(Client):
         """
         # Convert messages to ChatMessage objects
         chat_messages = [
-            ChatMessage(role=msg["role"], content=msg["content"]) 
+            ChatMessage(role=msg["role"], content=msg["content"])
             for msg in messages
         ]
-        
+
         request = ChatCompletionRequest(
             messages=chat_messages,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        
+
         response = create_chat_completion_chat_completions_post.sync(
             client=self.client,
             user_id=self.user_id,
             body=request,
         )
-        
+
         return {
             "message": {
                 "role": response.message.role,
@@ -98,17 +99,17 @@ class ServiceClient(Client):
         """
         # Convert messages to ChatMessage objects
         chat_messages = [
-            ChatMessage(role=msg["role"], content=msg["content"]) 
+            ChatMessage(role=msg["role"], content=msg["content"])
             for msg in messages
         ]
-        
+
         request = ChatCompletionRequest(
             messages=chat_messages,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        
+
         # For now, we'll use the regular chat completion and simulate streaming
         # In a real implementation, this would use the streaming endpoint
         response = create_chat_completion_chat_completions_post.sync(
@@ -116,9 +117,9 @@ class ServiceClient(Client):
             user_id=self.user_id,
             body=request,
         )
-        
+
         # Simulate streaming by yielding the response as a single chunk
-        if response and hasattr(response, 'message'):
+        if response and hasattr(response, "message"):
             yield {
                 "content": response.message.content,
                 "finish_reason": response.finish_reason,
@@ -132,7 +133,7 @@ class ServiceClient(Client):
                 "model": model,
             }
 
-    def get_client(self):
+    def get_client(self) -> GeneratedClient:
         """Get the underlying generated client.
 
         Returns:

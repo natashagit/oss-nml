@@ -1,6 +1,5 @@
 """Pydantic models for AI client service request/response serialization."""
 
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +33,10 @@ class ChatCompletionStreamChunk(BaseModel):
     """A single chunk in a streaming chat completion."""
 
     content: str = Field(..., description="The content delta for this chunk")
-    finish_reason: str | None = Field(None, description="Reason for stopping (present in final chunk)")
+    finish_reason: str | None = Field(
+        None,
+        description="Reason for stopping (present in final chunk)",
+    )
     model: str = Field(..., description="The model being used")
 
 

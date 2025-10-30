@@ -6,7 +6,7 @@ methods to store and retrieve encrypted user credentials.
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cryptography.fernet import Fernet
 from sqlalchemy import Column, DateTime, String, Text, create_engine
@@ -27,6 +27,7 @@ class UserCredential(Base):
         openai_api_key: Encrypted OpenAI API key.
         created_at: Timestamp when the credential was created.
         updated_at: Timestamp when the credential was last updated.
+
     """
 
     __tablename__ = "user_credentials"
@@ -35,11 +36,11 @@ class UserCredential(Base):
     email = Column(String(255), nullable=False, unique=True)
     google_refresh_token = Column(Text, nullable=True)
     openai_api_key = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
 
@@ -60,16 +61,17 @@ class CredentialStore:
         Args:
             database_url: PostgreSQL connection string (or from DATABASE_URL env var).
             encryption_key: Base64-encoded Fernet key (or from ENCRYPTION_KEY env var).
+
         """
         self.database_url = database_url or os.environ.get(
-            "DATABASE_URL", "postgresql://localhost/openai_service"
+            "DATABASE_URL", "postgresql://localhost/openai_service",
         )
         self.encryption_key = encryption_key or os.environ.get("ENCRYPTION_KEY")
 
         if not self.encryption_key:
             logger.warning(
                 "No ENCRYPTION_KEY found. Generating a new one. "
-                "This should only happen in development!"
+                "This should only happen in development!",
             )
             self.encryption_key = Fernet.generate_key().decode()
 
@@ -100,6 +102,7 @@ class CredentialStore:
             email: User's email address.
             google_refresh_token: Google OAuth refresh token (will be encrypted).
             openai_api_key: OpenAI API key (will be encrypted).
+
         """
         session = self.session_factory()
         try:
@@ -117,7 +120,7 @@ class CredentialStore:
                     user_cred.google_refresh_token = encrypted_google_token
                 if encrypted_openai_key:
                     user_cred.openai_api_key = encrypted_openai_key
-                user_cred.updated_at = datetime.now(timezone.utc)
+                user_cred.updated_at = datetime.now(UTC)
             else:
                 # Create new record
                 user_cred = UserCredential(
@@ -145,6 +148,7 @@ class CredentialStore:
 
         Returns:
             Decrypted OpenAI API key or None if not found.
+
         """
         session = self.session_factory()
         try:
@@ -163,6 +167,7 @@ class CredentialStore:
 
         Returns:
             Decrypted Google refresh token or None if not found.
+
         """
         session = self.session_factory()
         try:
@@ -181,6 +186,7 @@ class CredentialStore:
 
         Returns:
             True if the user exists, False otherwise.
+
         """
         session = self.session_factory()
         try:

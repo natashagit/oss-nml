@@ -4,13 +4,13 @@ import logging
 from collections.abc import Callable
 
 from ai_client_api import Client, get_client
-from openai_client_impl import OpenAIClient, CredentialStore
+from openai_client_impl import CredentialStore, OpenAIClient
 
 logger = logging.getLogger(__name__)
 
 # Global client factory - can be overridden for testing
 def _client_factory() -> Client:
-    """Default client factory that uses the registered implementation."""
+    """Return default client factory that uses the registered implementation."""
     return get_client(user_id="default_user")  # This will be overridden with actual user_id
 
 
@@ -30,15 +30,17 @@ def get_ai_client(user_id: str) -> Client:
 
     Raises:
         ValueError: If no credentials are found for the user.
+
     """
     try:
         # OpenAIClient will automatically check environment variable, then database
         client = OpenAIClient(user_id=user_id)
+    except Exception:
+        logger.exception("Failed to create AI client for user %s", user_id)
+        raise
+    else:
         logger.info("Successfully created AI client for user %s", user_id)
         return client
-    except Exception as e:
-        logger.error("Failed to create AI client for user %s: %s", user_id, str(e))
-        raise
 
 
 def set_client_factory(factory: Callable[[str], Client]) -> None:
