@@ -4,9 +4,10 @@ import logging
 from typing import Annotated
 
 import openai_client_impl  # noqa: F401 - Registers the OpenAI client implementation
+from ai_client_api import Client
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
-from ai_client_api import Client
+from openai_client_impl import CredentialStore, OAuthManager
 
 from ai_client_service.dependencies import get_ai_client, get_credential_store
 from ai_client_service.models import (
@@ -14,12 +15,10 @@ from ai_client_service.models import (
     ChatCompletionResponse,
     ChatCompletionStreamChunk,
     ChatMessage,
-    ErrorResponse,
     HealthCheckResponse,
     OAuthCallbackRequest,
     OAuthCallbackResponse,
 )
-from openai_client_impl import OAuthManager, CredentialStore
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +31,7 @@ app = FastAPI(
 )
 
 
-@app.get("/health", response_model=HealthCheckResponse)
+@app.get("/health")
 def health_check() -> HealthCheckResponse:
     """Health check endpoint.
 
@@ -60,11 +59,11 @@ def oauth_authorize(request: Request) -> RedirectResponse:
         logger.info("Redirecting user to OAuth provider: %s", auth_url)
         return RedirectResponse(url=auth_url)
     except Exception as e:
-        logger.error("Failed to initiate OAuth flow: %s", str(e))
+        logger.exception("Failed to initiate OAuth flow: %s", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to initiate OAuth flow: {e!s}") from e
 
 
-@app.post("/oauth/callback", response_model=OAuthCallbackResponse)
+@app.post("/oauth/callback")
 def oauth_callback(
     callback_data: OAuthCallbackRequest,
     credential_store: Annotated[CredentialStore, Depends(get_credential_store)],
@@ -82,12 +81,13 @@ def oauth_callback(
     try:
         oauth_manager = OAuthManager()
         user_id, tokens = oauth_manager.handle_callback(
-            callback_data.code, callback_data.state
+            callback_data.code,
+            callback_data.state,
         )
-        
+
         # Store the tokens in the credential store
         credential_store.store_google_tokens(user_id, tokens)
-        
+
         logger.info("OAuth callback successful for user %s", user_id)
         return OAuthCallbackResponse(
             success=True,
@@ -95,7 +95,7 @@ def oauth_callback(
             user_id=user_id,
         )
     except Exception as e:
-        logger.error("OAuth callback failed: %s", str(e))
+        logger.exception("OAuth callback failed: %s", str(e))
         return OAuthCallbackResponse(
             success=False,
             message=f"OAuth authentication failed: {e!s}",
@@ -103,7 +103,7 @@ def oauth_callback(
         )
 
 
-@app.post("/chat/completions", response_model=ChatCompletionResponse)
+@app.post("/chat/completions")
 def create_chat_completion(
     request: ChatCompletionRequest,
     user_id: Annotated[str, Query(description="User ID for authentication")],
@@ -126,22 +126,22 @@ def create_chat_completion(
     try:
         # Convert Pydantic models to dict format expected by the client
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
-        
+
         logger.info("Creating chat completion for user %s with model %s", user_id, request.model)
-        
+
         response = client.chat_completion(
             messages=messages,
             model=request.model,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
         )
-        
+
         # Convert response to our Pydantic model
         message = ChatMessage(
             role=response["message"]["role"],
             content=response["message"]["content"],
         )
-        
+
         return ChatCompletionResponse(
             message=message,
             model=response["model"],
@@ -149,7 +149,7 @@ def create_chat_completion(
             finish_reason=response["finish_reason"],
         )
     except Exception as e:
-        logger.error("Failed to create chat completion for user %s: %s", user_id, str(e))
+        logger.exception("Failed to create chat completion for user %s: %s", user_id, str(e))
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create chat completion: {e!s}",
@@ -179,9 +179,11 @@ def create_chat_completion_stream(
     try:
         # Convert Pydantic models to dict format expected by the client
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
-        
-        logger.info("Creating streaming chat completion for user %s with model %s", user_id, request.model)
-        
+
+        logger.info(
+            "Creating streaming chat completion for user %s with model %s", user_id, request.model
+        )
+
         for chunk_data in client.chat_completion_stream(
             messages=messages,
             model=request.model,
@@ -195,16 +197,16 @@ def create_chat_completion_stream(
             )
             yield chunk
     except Exception as e:
-        logger.error("Failed to create streaming chat completion for user %s: %s", user_id, str(e))
+        logger.exception(
+            "Failed to create streaming chat completion for user %s: %s", user_id, str(e)
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create streaming chat completion: {e!s}",
         ) from e
 
 
-
-
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

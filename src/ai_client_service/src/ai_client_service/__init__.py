@@ -14,10 +14,6 @@ from ai_client_service.models import (
 )
 
 __all__ = [
-    "app",
-    "get_ai_client",
-    "get_credential_store",
-    "set_client_factory",
     "ChatCompletionRequest",
     "ChatCompletionResponse",
     "ChatCompletionStreamChunk",
@@ -26,4 +22,8 @@ __all__ = [
     "HealthCheckResponse",
     "OAuthCallbackRequest",
     "OAuthCallbackResponse",
+    "app",
+    "get_ai_client",
+    "get_credential_store",
+    "set_client_factory",
 ]

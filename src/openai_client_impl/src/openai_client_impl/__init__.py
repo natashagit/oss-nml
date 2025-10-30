@@ -2,7 +2,7 @@
 
 This implementation supports multiple credential sources:
 1. Explicit API key parameter
-2. OPENAI_API_KEY environment variable  
+2. OPENAI_API_KEY environment variable
 3. Database (CredentialStore) for OAuth flow
 """
 
@@ -11,9 +11,9 @@ from openai_client_impl.database import CredentialStore
 from openai_client_impl.openai_impl import OpenAIClient, get_client_impl, register
 
 __all__ = [
-    "OpenAIClient",
-    "OAuthManager",
     "CredentialStore",
+    "OAuthManager",
+    "OpenAIClient",
     "get_client_impl",
     "register",
 ]

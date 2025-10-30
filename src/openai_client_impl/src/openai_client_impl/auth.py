@@ -32,6 +32,7 @@ class OAuthManager:
 
     Attributes:
         SCOPES: OAuth scopes required for user authentication.
+
     """
 
     SCOPES = [
@@ -54,12 +55,14 @@ class OAuthManager:
             client_id: Google OAuth client ID (or from GOOGLE_CLIENT_ID env var).
             client_secret: Google OAuth client secret (or from GOOGLE_CLIENT_SECRET env var).
             redirect_uri: OAuth redirect URI (or from OAUTH_REDIRECT_URI env var).
+
         """
         self.credential_store = credential_store
         self.client_id = client_id or os.environ.get("GOOGLE_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("GOOGLE_CLIENT_SECRET")
         self.redirect_uri = redirect_uri or os.environ.get(
-            "OAUTH_REDIRECT_URI", "http://localhost:8000/oauth/callback"
+            "OAUTH_REDIRECT_URI",
+            "http://localhost:8000/oauth/callback",
         )
 
         if not self.client_id or not self.client_secret:
@@ -78,6 +81,7 @@ class OAuthManager:
         Returns:
             A tuple of (authorization_url, state).
             The state should be stored in the session to verify the callback.
+
         """
         flow = Flow.from_client_config(
             client_config={
@@ -87,7 +91,7 @@ class OAuthManager:
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
                     "redirect_uris": [self.redirect_uri],
-                }
+                },
             },
             scopes=self.SCOPES,
             state=state,
@@ -103,7 +107,9 @@ class OAuthManager:
         return authorization_url, state  # type: ignore[return-value]
 
     def handle_callback(
-        self, authorization_response: str, state: str | None = None
+        self,
+        authorization_response: str,
+        state: str | None = None,
     ) -> dict[str, Any]:
         """Handle the OAuth callback from Google.
 
@@ -119,6 +125,7 @@ class OAuthManager:
 
         Raises:
             ValueError: If the callback processing fails.
+
         """
         try:
             flow = Flow.from_client_config(
@@ -129,7 +136,7 @@ class OAuthManager:
                         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                         "token_uri": "https://oauth2.googleapis.com/token",
                         "redirect_uris": [self.redirect_uri],
-                    }
+                    },
                 },
                 scopes=self.SCOPES,
                 state=state,
@@ -167,6 +174,7 @@ class OAuthManager:
 
         Returns:
             Dictionary with user_id, email, and name.
+
         """
         import requests
 
@@ -192,6 +200,7 @@ class OAuthManager:
 
         Returns:
             Refreshed Credentials object or None if refresh fails.
+
         """
         refresh_token = self.credential_store.get_google_refresh_token(user_id)
         if not refresh_token:

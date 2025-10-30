@@ -20,7 +20,9 @@ def register() -> None:
     ai_client_api.get_client = get_client_impl
 
 
-def get_client(base_url: str = "http://127.0.0.1:8000", user_id: str = "default_user") -> ServiceClient:
+def get_client(
+    base_url: str = "http://127.0.0.1:8000", user_id: str = "default_user"
+) -> ServiceClient:
     """Drop-in replacement for ai_client_api.get_client."""
     return ServiceClient(base_url=base_url, user_id=user_id)
 

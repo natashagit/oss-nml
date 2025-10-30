@@ -12,13 +12,15 @@ This allows for flexible deployment scenarios while maintaining OAuth support.
 import logging
 import os
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import ai_client_api
 from openai import OpenAI, Stream
-from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 from openai_client_impl.database import CredentialStore
+
+if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,7 @@ class OpenAIClient(ai_client_api.Client):
         user_id: The unique identifier for the user.
         credential_store: Database store for retrieving user credentials.
         openai_client: The OpenAI API client instance.
+
     """
 
     def __init__(
@@ -58,6 +61,7 @@ class OpenAIClient(ai_client_api.Client):
 
         Raises:
             ValueError: If no OpenAI API key is found from any source.
+
         """
         self.user_id = user_id
         # Defer database initialization unless we actually need it
@@ -123,10 +127,13 @@ class OpenAIClient(ai_client_api.Client):
 
         Raises:
             Exception: If the API request fails.
+
         """
         try:
             logger.debug(
-                "Requesting chat completion for user %s with model %s", self.user_id, model
+                "Requesting chat completion for user %s with model %s",
+                self.user_id,
+                model,
             )
 
             response: ChatCompletion = self.openai_client.chat.completions.create(
@@ -185,6 +192,7 @@ class OpenAIClient(ai_client_api.Client):
 
         Raises:
             Exception: If the API request fails.
+
         """
         try:
             logger.debug(
@@ -219,7 +227,9 @@ class OpenAIClient(ai_client_api.Client):
             logger.info("Streaming chat completion completed for user %s", self.user_id)
 
         except Exception:
-            logger.exception("Failed to generate streaming chat completion for user %s", self.user_id)
+            logger.exception(
+                "Failed to generate streaming chat completion for user %s", self.user_id
+            )
             raise
 
 
@@ -238,6 +248,7 @@ def get_client_impl(
 
     Returns:
         An OpenAIClient instance configured for the user.
+
     """
     return OpenAIClient(
         user_id=user_id,
@@ -246,7 +257,9 @@ def get_client_impl(
     )
 
 
-def register(credential_store: CredentialStore | None = None, openai_api_key: str | None = None) -> None:
+def register(
+    credential_store: CredentialStore | None = None, openai_api_key: str | None = None
+) -> None:
     """Register the OpenAI client implementation with the AI client API.
 
     Args:
