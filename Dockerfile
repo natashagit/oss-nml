@@ -21,4 +21,4 @@ USER appuser
 EXPOSE 8000
 
 # no --app-dir needed once installed!
-CMD ["uv", "run", "uvicorn", "mail_client_service.main:app","--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "ai_client_service.main:app","--host", "0.0.0.0", "--port", "8000"]
