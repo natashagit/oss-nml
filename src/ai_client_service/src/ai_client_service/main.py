@@ -153,7 +153,7 @@ def create_chat_completion(
         ) from e
 
 
-@app.post("/chat/completions/stream")
+@app.post("/chat/completions/stream", response_model=None)
 def create_chat_completion_stream(
     request: ChatCompletionRequest,
     user_id: Annotated[str, Query(description="User ID for authentication")],
