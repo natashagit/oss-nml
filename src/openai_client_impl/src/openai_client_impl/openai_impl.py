@@ -60,7 +60,8 @@ class OpenAIClient(ai_client_api.Client):
             ValueError: If no OpenAI API key is found from any source.
         """
         self.user_id = user_id
-        self.credential_store = credential_store or CredentialStore()
+        # Defer database initialization unless we actually need it
+        self.credential_store = credential_store
 
         # Get API key in priority order: parameter -> environment -> database
         if openai_api_key:
@@ -72,7 +73,9 @@ class OpenAIClient(ai_client_api.Client):
             if api_key:
                 logger.debug("Using API key from environment variable for user %s", user_id)
             else:
-                # Fall back to database
+                # Fall back to database (initialize store only when needed)
+                if self.credential_store is None:
+                    self.credential_store = CredentialStore()
                 api_key = self.credential_store.get_openai_api_key(user_id)
                 if api_key:
                     logger.debug("Using API key from database for user %s", user_id)
@@ -85,7 +88,13 @@ class OpenAIClient(ai_client_api.Client):
             )
             raise ValueError(msg)
 
-        self.openai_client = OpenAI(api_key=api_key)
+        # Support optional project/org scoping if provided via environment
+        project = os.getenv("OPENAI_PROJECT")
+        organization = os.getenv("OPENAI_ORG")
+        if project or organization:
+            self.openai_client = OpenAI(api_key=api_key, project=project, organization=organization)
+        else:
+            self.openai_client = OpenAI(api_key=api_key)
         logger.info("Initialized OpenAI client for user %s", user_id)
 
     def chat_completion(
