@@ -19,12 +19,10 @@ def main() -> None:
     try:
         client = ai_client_api.get_client(user_id)
         logger.info("Successfully initialized AI client")
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to initialize AI client")
-        logger.exception("Exception type: %s", type(e).__name__)
-        logger.exception("Traceback: %s", traceback.format_exc())
         logger.info("Make sure you have valid credentials stored for user: %s", user_id)
-        return
+
 
     # Test 1: Chat completion
     messages = [{"role": "user", "content": "hello, how are you?"}]

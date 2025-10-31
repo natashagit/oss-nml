@@ -15,25 +15,8 @@ def _client_factory() -> Client:
 
 
 def get_ai_client(user_id: str) -> Client:
-    """Return an AI client instance for a specific user.
-
-    This function is designed to be used with FastAPI's dependency injection system.
-    The client will resolve credentials in priority order:
-    1. OPENAI_API_KEY environment variable
-    2. Database (CredentialStore)
-
-    Args:
-        user_id: The unique identifier for the user.
-
-    Returns:
-        Client: An instance of the AI client.
-
-    Raises:
-        ValueError: If no credentials are found for the user.
-
-    """
+    """Create and return an AI client for the given user."""
     try:
-        # OpenAIClient will automatically check environment variable, then database
         client = OpenAIClient(user_id=user_id)
     except Exception:
         logger.exception("Failed to create AI client for user %s", user_id)
@@ -41,6 +24,7 @@ def get_ai_client(user_id: str) -> Client:
     else:
         logger.info("Successfully created AI client for user %s", user_id)
         return client
+
 
 
 def set_client_factory(factory: Callable[[str], Client]) -> None:
