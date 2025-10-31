@@ -2,7 +2,6 @@
 
 import contextlib
 import logging
-import traceback
 
 import ai_client_adapter  # noqa: F401  (auto-registers service adapter)
 import ai_client_api

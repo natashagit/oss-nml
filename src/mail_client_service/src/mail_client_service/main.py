@@ -1,11 +1,11 @@
 """FastAPI application for mail client service."""
-from typing import Annotated, List, Optional, Literal
+from typing import Annotated, Literal
 
 import gmail_client_impl  # noqa: F401 - Registers the client implementation
 from fastapi import Depends, FastAPI, HTTPException, Query
+from mail_client_api import Client
 from pydantic import BaseModel, Field
 
-from mail_client_api import Client
 from mail_client_service.dependencies import get_mail_client
 from mail_client_service.models import MessageDetail, MessageSummary, OperationResponse
 
@@ -19,7 +19,7 @@ app = FastAPI(
 # Messages API
 # -----------------------------
 
-@app.get("/messages", response_model=list[MessageSummary])
+@app.get("/messages")
 def get_messages(
     client: Annotated[Client, Depends(get_mail_client)],
     max_results: Annotated[int, Query(ge=1, le=100)] = 10,
@@ -41,7 +41,7 @@ def get_messages(
         raise HTTPException(status_code=500, detail=f"Failed to fetch messages: {e!s}") from e
 
 
-@app.get("/messages/{message_id}", response_model=MessageDetail)
+@app.get("/messages/{message_id}")
 def get_message(
     message_id: str,
     client: Annotated[Client, Depends(get_mail_client)],
@@ -65,7 +65,7 @@ def get_message(
         ) from e
 
 
-@app.post("/messages/{message_id}/mark-as-read", response_model=OperationResponse)
+@app.post("/messages/{message_id}/mark-as-read")
 def mark_message_as_read(
     message_id: str,
     client: Annotated[Client, Depends(get_mail_client)],
@@ -84,7 +84,7 @@ def mark_message_as_read(
         ) from e
 
 
-@app.delete("/messages/{message_id}", response_model=OperationResponse)
+@app.delete("/messages/{message_id}")
 def delete_message(
     message_id: str,
     client: Annotated[Client, Depends(get_mail_client)],
@@ -114,27 +114,42 @@ def health_check() -> dict[str, str]:
 # -----------------------------
 
 class ChatMessage(BaseModel):
+    """A single chat message in a conversation.
+
+    role: one of 'system', 'user', or 'assistant'
+    content: the textual content of the message
+    """
+
     role: Literal["system", "user", "assistant"] = Field(..., description="Message role")
     content: str = Field(..., description="Message content")
 
 
 class ChatCompletionRequest(BaseModel):
-    # REQUIRED so that missing user_id yields a 422 before hitting any logic
+    """Request model for chat completions (minimal for tests).
+
+    `user_id` is required so validation fails early for missing authentication.
+    """
+
     user_id: str
-    messages: List[ChatMessage]
-    model: Optional[str] = None
-    temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
+    messages: list[ChatMessage]
+    model: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
 
 
 class ChatCompletionResponse(BaseModel):
+    """Response model for chat completions used by tests.
+
+    Contains the assistant's message, model metadata, and usage info.
+    """
+
     message: ChatMessage
     model: str = "mock"
     usage: dict = Field(default_factory=dict)
     finish_reason: str = "stop"
 
 
-@app.post("/chat-completions", response_model=ChatCompletionResponse)
+@app.post("/chat-completions")
 def create_chat_completion(req: ChatCompletionRequest) -> ChatCompletionResponse:
     """Minimal behavior for tests: echo the last user message."""
     last_user = next((m for m in reversed(req.messages) if m.role == "user"), None)

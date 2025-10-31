@@ -3,7 +3,6 @@
 import logging
 from collections.abc import Iterator
 from typing import Annotated
-from fastapi.responses import StreamingResponse
 
 import openai_client_impl  # noqa: F401 - Registers the OpenAI client implementation
 from ai_client_api import Client
