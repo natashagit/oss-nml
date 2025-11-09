@@ -3,12 +3,18 @@
 from collections.abc import Iterator
 
 from ai_client_api import Client
+from ai_client_api.models import (
+    ChatCompletionChunk,
+    ChatCompletionResponse,
+    ChatMessage,
+    TokenUsage,
+)
 from ai_client_service_client.api.default import (
     create_chat_completion_chat_completions_post,
 )
 from ai_client_service_client.client import Client as GeneratedClient
 from ai_client_service_client.models.chat_completion_request import ChatCompletionRequest
-from ai_client_service_client.models.chat_message import ChatMessage
+from ai_client_service_client.models.chat_message import ChatMessage as ServiceChatMessage
 
 
 class ServiceClient(Client):
@@ -32,31 +38,31 @@ class ServiceClient(Client):
 
     def chat_completion(
         self,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         model: str = "gpt-3.5-turbo",
         temperature: float = 0.7,
         max_tokens: int | None = None,
-    ) -> dict[str, any]:
+    ) -> ChatCompletionResponse:
         """Generate a chat completion using the AI service.
 
         Args:
-            messages: List of message dicts with 'role' and 'content' keys.
+            messages: List of chat messages.
             model: The model to use for completion.
             temperature: Sampling temperature (0.0 to 2.0).
             max_tokens: Maximum tokens to generate.
 
         Returns:
-            A dictionary containing the completion response.
+            A chat completion response.
 
         """
-        # Convert messages to ChatMessage objects
-        chat_messages = [
-            ChatMessage(role=msg["role"], content=msg["content"])
+        # Convert domain ChatMessage to service ChatMessage
+        service_messages = [
+            ServiceChatMessage(role=msg.role, content=msg.content)
             for msg in messages
         ]
 
         request = ChatCompletionRequest(
-            messages=chat_messages,
+            messages=service_messages,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -68,27 +74,56 @@ class ServiceClient(Client):
             body=request,
         )
 
-        return {
-            "message": {
-                "role": response.message.role,
-                "content": response.message.content,
-            },
-            "model": response.model,
-            "usage": response.usage.to_dict(),
-            "finish_reason": response.finish_reason,
-        }
+        # Handle error responses
+        if response is None:
+            raise ValueError("Received None response from service")
+        
+        # Check if it's an HTTPValidationError (imported from generated client)
+        from ai_client_service_client.models.http_validation_error import HTTPValidationError
+        if isinstance(response, HTTPValidationError):
+            raise ValueError(f"Validation error: {response}")
+
+        # Convert service response to domain models
+        finish_reason: str | None = None
+        if hasattr(response.finish_reason, "__class__"):
+            # Handle Unset type from generated client
+            from ai_client_service_client.types import Unset
+            if not isinstance(response.finish_reason, Unset):
+                finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
+        else:
+            finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
+
+        # Access usage as dictionary (ChatCompletionResponseUsage uses additional_properties)
+        # The usage object supports dictionary-like access via __getitem__
+        prompt_tokens = response.usage["prompt_tokens"] if "prompt_tokens" in response.usage else 0
+        completion_tokens = response.usage["completion_tokens"] if "completion_tokens" in response.usage else 0
+        total_tokens = response.usage["total_tokens"] if "total_tokens" in response.usage else 0
+
+        return ChatCompletionResponse(
+            message=ChatMessage(
+                role=response.message.role,
+                content=response.message.content,
+            ),
+            model=response.model,
+            usage=TokenUsage(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+            ),
+            finish_reason=finish_reason,
+        )
 
     def chat_completion_stream(
         self,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         model: str = "gpt-3.5-turbo",
         temperature: float = 0.7,
         max_tokens: int | None = None,
-    ) -> Iterator[dict[str, any]]:
+    ) -> Iterator[ChatCompletionChunk]:
         """Generate a streaming chat completion using the AI service.
 
         Args:
-            messages: List of message dicts with 'role' and 'content' keys.
+            messages: List of chat messages.
             model: The model to use for completion.
             temperature: Sampling temperature (0.0 to 2.0).
             max_tokens: Maximum tokens to generate.
@@ -97,14 +132,14 @@ class ServiceClient(Client):
             Chunks of the completion response as they're generated.
 
         """
-        # Convert messages to ChatMessage objects
-        chat_messages = [
-            ChatMessage(role=msg["role"], content=msg["content"])
+        # Convert domain ChatMessage to service ChatMessage
+        service_messages = [
+            ServiceChatMessage(role=msg.role, content=msg.content)
             for msg in messages
         ]
 
         request = ChatCompletionRequest(
-            messages=chat_messages,
+            messages=service_messages,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -118,20 +153,39 @@ class ServiceClient(Client):
             body=request,
         )
 
+        # Handle error responses
+        if response is None:
+            yield ChatCompletionChunk(
+                content="No response",
+                finish_reason="stop",
+                model=model,
+            )
+            return
+        
+        # Check if it's an HTTPValidationError
+        from ai_client_service_client.models.http_validation_error import HTTPValidationError
+        if isinstance(response, HTTPValidationError):
+            yield ChatCompletionChunk(
+                content=f"Validation error: {response}",
+                finish_reason="stop",
+                model=model,
+            )
+            return
+
         # Simulate streaming by yielding the response as a single chunk
-        if response and hasattr(response, "message"):
-            yield {
-                "content": response.message.content,
-                "finish_reason": response.finish_reason,
-                "model": response.model,
-            }
+        finish_reason: str | None = None
+        if hasattr(response.finish_reason, "__class__"):
+            from ai_client_service_client.types import Unset
+            if not isinstance(response.finish_reason, Unset):
+                finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
         else:
-            # Fallback: yield the response as a single chunk
-            yield {
-                "content": str(response) if response else "No response",
-                "finish_reason": "stop",
-                "model": model,
-            }
+            finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
+
+        yield ChatCompletionChunk(
+            content=response.message.content,
+            finish_reason=finish_reason,
+            model=response.model,
+        )
 
     def get_client(self) -> GeneratedClient:
         """Get the underlying generated client.

@@ -3,6 +3,7 @@
 
 import pytest
 
+from ai_client_api.models import ChatMessage
 from ai_client_adapter.client_impl import ServiceClient
 
 
@@ -19,7 +20,7 @@ def test_chat_completion_not_implemented() -> None:
     client = ServiceClient()
 
     with pytest.raises(NotImplementedError, match="Service client not yet generated"):
-        client.chat_completion([{"role": "user", "content": "Hello"}])
+        client.chat_completion([ChatMessage(role="user", content="Hello")])
 
 
 def test_chat_completion_stream_not_implemented() -> None:
@@ -27,7 +28,7 @@ def test_chat_completion_stream_not_implemented() -> None:
     client = ServiceClient()
 
     with pytest.raises(NotImplementedError, match="Service client not yet generated"):
-        list(client.chat_completion_stream([{"role": "user", "content": "Hello"}]))
+        list(client.chat_completion_stream([ChatMessage(role="user", content="Hello")]))
 
 
 def test_get_client_not_implemented() -> None:

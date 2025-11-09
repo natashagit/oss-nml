@@ -6,6 +6,7 @@ import traceback
 
 import ai_client_adapter  # noqa: F401  (auto-registers service adapter)
 import ai_client_api
+from ai_client_api.models import ChatMessage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,24 +28,24 @@ def main() -> None:
         return
 
     # Test 1: Chat completion
-    messages = [{"role": "user", "content": "hello, how are you?"}]
+    messages = [ChatMessage(role="user", content="hello, how are you?")]
     logger.info("Testing chat completion...")
     with contextlib.suppress(Exception):
         resp = client.chat_completion(messages, model="gpt-3.5-turbo-0125")
-        logger.info("%s", resp["message"]["content"])
+        logger.info("%s", resp.message.content)
 
     # Test 2: Streaming chat completion
-    streaming_messages = [{"role": "user", "content": "Write two short sentences about a flight."}]
+    streaming_messages = [ChatMessage(role="user", content="Write two short sentences about a flight.")]
     logger.info("Testing streaming chat completion...")
     with contextlib.suppress(Exception):
         for chunk in client.chat_completion_stream(streaming_messages, model="gpt-3.5-turbo-0125"):
-            if chunk.get("content"):
+            if chunk.content:
                 pass
 
     # Test 3: Different model and parameters
     advanced_messages = [
-        {"role": "system", "content": "You are a helpful coding assistant."},
-        {"role": "user", "content": "Explain what dependency injection is in one sentence."},
+        ChatMessage(role="system", content="You are a helpful coding assistant."),
+        ChatMessage(role="user", content="Explain what dependency injection is in one sentence."),
     ]
     logger.info("Testing advanced chat completion...")
     with contextlib.suppress(Exception):
@@ -54,7 +55,7 @@ def main() -> None:
             temperature=0.3,
             max_tokens=100,
         )
-        logger.info("%s", resp["message"]["content"])
+        logger.info("%s", resp.message.content)
 
     print("Demo complete.")  # noqa: T201
 

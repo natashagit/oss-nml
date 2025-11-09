@@ -3,6 +3,12 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 
+from ai_client_api.models import (
+    ChatCompletionChunk,
+    ChatCompletionResponse,
+    ChatMessage,
+)
+
 __all__ = ["Client", "get_client"]
 
 
@@ -12,21 +18,21 @@ class Client(ABC):
     @abstractmethod
     def chat_completion(
         self,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         model: str = "gpt-3.5-turbo",
         temperature: float = 0.7,
         max_tokens: int | None = None,
-    ) -> dict[str, any]:
+    ) -> ChatCompletionResponse:
         """Generate a chat completion.
 
         Args:
-            messages: List of message dicts with 'role' and 'content' keys.
+            messages: List of chat messages.
             model: The model to use for completion.
             temperature: Sampling temperature (0.0 to 2.0).
             max_tokens: Maximum tokens to generate.
 
         Returns:
-            A dictionary containing the completion response.
+            A chat completion response.
 
         """
         raise NotImplementedError
@@ -34,15 +40,15 @@ class Client(ABC):
     @abstractmethod
     def chat_completion_stream(
         self,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         model: str = "gpt-3.5-turbo",
         temperature: float = 0.7,
         max_tokens: int | None = None,
-    ) -> Iterator[dict[str, any]]:
+    ) -> Iterator[ChatCompletionChunk]:
         """Generate a streaming chat completion.
 
         Args:
-            messages: List of message dicts with 'role' and 'content' keys.
+            messages: List of chat messages.
             model: The model to use for completion.
             temperature: Sampling temperature (0.0 to 2.0).
             max_tokens: Maximum tokens to generate.

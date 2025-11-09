@@ -30,6 +30,3 @@ def get_client(
 
 # Auto-register the adapter when the module is imported
 register()
-
-
-__all__ = ["ServiceClient", "get_client", "get_client_impl", "register"]

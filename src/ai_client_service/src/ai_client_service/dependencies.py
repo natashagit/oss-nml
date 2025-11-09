@@ -42,7 +42,6 @@ def get_ai_client(user_id: str) -> Client:
         logger.info("Successfully created AI client for user %s", user_id)
         return client
 
-
 def set_client_factory(factory: Callable[[str], Client]) -> None:
     """Override the client factory (primarily for testing).
 
@@ -62,3 +61,4 @@ def get_credential_store() -> CredentialStore:
 
     """
     return CredentialStore()
+
