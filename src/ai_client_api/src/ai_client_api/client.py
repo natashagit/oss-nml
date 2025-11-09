@@ -9,8 +9,6 @@ from ai_client_api.models import (
     ChatMessage,
 )
 
-__all__ = ["Client", "get_client"]
-
 
 class Client(ABC):
     """Abstract base class representing an AI client for chat completions."""
