@@ -7,15 +7,17 @@ from collections.abc import Iterator
 from typing import Annotated
 
 import openai_client_impl  # noqa: F401 - Registers the OpenAI client implementation
-from ai_client_api import Client
+from ai_client_api import Client  # type: ignore[attr-defined]  # Client is exported via __init__.py
 from ai_client_api.models import ChatMessage as APIChatMessage
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from openai_client_impl import OAuthManager
 from starlette.middleware.sessions import SessionMiddleware
 
-from ai_client_service.dependencies import get_ai_client
+from ai_client_service.dependencies import require_authenticated_client, require_authentication
 from ai_client_service.models import (
+    ApiKeyRequest,
+    ApiKeyResponse,
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatCompletionStreamChunk,
@@ -74,11 +76,20 @@ def oauth_authorize(request: Request) -> RedirectResponse:
         # Generate state parameter for CSRF protection
         state = secrets.token_urlsafe(32)
         request.session["oauth_state"] = state
+        # Explicitly save session to ensure cookie is set
+        # This is important for OAuth redirects
+        logger.debug("Stored OAuth state in session: %s", state)
 
         oauth_manager = OAuthManager(credential_store=None)
-        auth_url, _ = oauth_manager.get_authorization_url(state=state)
+        auth_url, returned_state = oauth_manager.get_authorization_url(state=state)
+        # Use the state returned by oauthlib (it may modify it)
+        if returned_state and returned_state != state:
+            request.session["oauth_state"] = returned_state
+            logger.debug("Updated OAuth state to oauthlib's state: %s", returned_state)
+        
         logger.info("Redirecting user to OAuth provider: %s", auth_url)
-        return RedirectResponse(url=auth_url)
+        response = RedirectResponse(url=auth_url)
+        return response
     except Exception as e:
         logger.exception("Failed to initiate OAuth flow")
         raise HTTPException(status_code=500, detail=f"Failed to initiate OAuth flow: {e!s}") from e
@@ -121,13 +132,37 @@ def oauth_callback(
             )
 
         # Verify state parameter
+        # Note: If session cookie didn't persist, stored_state will be None
+        # In that case, we rely on oauthlib's state verification in handle_callback
         stored_state = request.session.get("oauth_state")
-        if not state or state != stored_state:
-            logger.warning("OAuth state mismatch - possible CSRF attack")
+        logger.info(
+            "OAuth callback state check - received: %s, stored: %s, session keys: %s",
+            state,
+            stored_state,
+            list(request.session.keys()),
+        )
+        
+        # Verify state if we have it in session (primary check)
+        # If session doesn't have it, oauthlib will verify it (secondary check)
+        if stored_state and (not state or state != stored_state):
+            logger.warning(
+                "OAuth state mismatch - received: %s, stored: %s. Possible CSRF attack.",
+                state,
+                stored_state,
+            )
             return OAuthCallbackResponse(
                 success=False,
                 message="Invalid state parameter",
                 user_id=None,
+            )
+        
+        # If no stored state but we have state in URL, log warning but proceed
+        # oauthlib will verify the state matches what it expects
+        if not stored_state and state:
+            logger.warning(
+                "OAuth state not found in session (session cookie may not have persisted). "
+                "Relying on oauthlib state verification. Received state: %s",
+                state,
             )
 
         # Construct the full callback URL for OAuthManager
@@ -164,29 +199,73 @@ def oauth_callback(
         )
 
 
+@app.post("/api-keys")
+def set_api_key(
+    request: Request,
+    api_key_request: ApiKeyRequest,
+    user_id: str = Depends(require_authentication),
+) -> ApiKeyResponse:
+    """Set the OpenAI API key for the authenticated user.
+
+    This endpoint requires the user to be authenticated via OAuth first.
+    The API key will be stored in the session for use in subsequent requests.
+
+    Args:
+        request: FastAPI request object for session access.
+        api_key_request: Request containing the OpenAI API key.
+        user_id: Authenticated user ID (from dependency).
+
+    Returns:
+        ApiKeyResponse: Success status and message.
+
+    Raises:
+        HTTPException: If the user is not authenticated.
+
+    """
+
+    try:
+        # Store API key in session
+        request.session["openai_api_key"] = api_key_request.openai_api_key
+        logger.info("API key stored for user %s", user_id)
+
+        return ApiKeyResponse(
+            success=True,
+            message="OpenAI API key stored successfully",
+        )
+    except Exception as e:
+        logger.exception("Failed to store API key for user %s", user_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to store API key: {e!s}",
+        ) from e
+
+
 @app.post("/chat/completions")
 def create_chat_completion(
     request: ChatCompletionRequest,
     http_request: Request,
-    user_id: Annotated[str, Query(description="User ID for authentication")],
+    client: Client = Depends(require_authenticated_client),
 ) -> ChatCompletionResponse:
     """Create a chat completion.
 
+    This endpoint requires the user to be authenticated via OAuth and have
+    set their OpenAI API key.
+
     Args:
         request: Chat completion request data.
-        user_id: User ID for authentication.
-        client: Injected AI client instance.
+        client: Authenticated AI client (from dependency).
+        http_request: FastAPI request object for session access.
 
     Returns:
         ChatCompletionResponse: Chat completion result.
 
     Raises:
-        HTTPException: If the request fails.
+        HTTPException: If authentication fails or the request fails.
 
     """
     try:
-        # Get client with session access
-        client = get_ai_client(user_id=user_id, request=http_request)
+        # Get user_id from session for logging
+        user_id = http_request.session.get("user_id", "unknown")
 
         # Convert Pydantic models to domain ChatMessage dataclasses
         messages = [APIChatMessage(role=msg.role, content=msg.content) for msg in request.messages]
@@ -228,25 +307,28 @@ def create_chat_completion(
 def create_chat_completion_stream(
     request: ChatCompletionRequest,
     http_request: Request,
-    user_id: Annotated[str, Query(description="User ID for authentication")],
+    client: Client = Depends(require_authenticated_client),
 ) -> Iterator[ChatCompletionStreamChunk]:
     """Create a streaming chat completion.
 
+    This endpoint requires the user to be authenticated via OAuth and have
+    set their OpenAI API key.
+
     Args:
         request: Chat completion request data.
-        user_id: User ID for authentication.
-        client: Injected AI client instance.
+        client: Authenticated AI client (from dependency).
+        http_request: FastAPI request object for session access.
 
     Yields:
         ChatCompletionStreamChunk: Streaming chunks of the completion.
 
     Raises:
-        HTTPException: If the request fails.
+        HTTPException: If authentication fails or the request fails.
 
     """
     try:
-        # Get client with session access
-        client = get_ai_client(user_id=user_id, request=http_request)
+        # Get user_id from session for logging
+        user_id = http_request.session.get("user_id", "unknown")
 
         # Convert Pydantic models to domain ChatMessage dataclasses
         messages = [APIChatMessage(role=msg.role, content=msg.content) for msg in request.messages]

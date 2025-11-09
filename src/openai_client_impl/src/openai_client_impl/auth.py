@@ -63,7 +63,7 @@ class OAuthManager:
         self.client_id = client_id or os.environ.get("GOOGLE_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("GOOGLE_CLIENT_SECRET")
         self.redirect_uri = redirect_uri or os.environ.get(
-            "OAUTH_REDIRECT_URI", "http://localhost:8000/oauth/callback",
+            "OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/oauth/callback",
         )
 
         if not self.client_id or not self.client_secret:

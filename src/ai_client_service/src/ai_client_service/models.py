@@ -68,3 +68,16 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error type")
     detail: str = Field(..., description="Error details")
     status_code: int = Field(..., description="HTTP status code")
+
+
+class ApiKeyRequest(BaseModel):
+    """Request model for setting OpenAI API key."""
+
+    openai_api_key: str = Field(..., description="OpenAI API key to store for the authenticated user")
+
+
+class ApiKeyResponse(BaseModel):
+    """Response model for API key operations."""
+
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="Status message")
