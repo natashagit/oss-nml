@@ -1,11 +1,11 @@
-"""Main module for demonstrating the AI client via the service adapter."""
+"""Main module for demonstrating the AI client via the local implementation."""
 
 import contextlib
 import logging
 import traceback
 
-import ai_client_adapter  # noqa: F401  (auto-registers service adapter)
-import ai_client_api
+import openai_client_impl  # noqa: F401  (auto-registers local implementation)
+from ai_client_api import get_client  # type: ignore[attr-defined]  # get_client is exported via __init__.py
 from ai_client_api.models import ChatMessage
 
 logging.basicConfig(level=logging.INFO)
@@ -13,18 +13,24 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Initialize the client and demonstrate all AI client methods."""
-    # Now, get_client() returns a concrete OpenAIClient instance via auto-registration
+    """Initialize the client and demonstrate all AI client methods.
+    
+    This uses the local OpenAI implementation, which requires OPENAI_API_KEY
+    environment variable to be set.
+    """
     user_id = "demo_user"
 
     try:
-        client = ai_client_api.get_client(user_id)
+        client = get_client(user_id)
         logger.info("Successfully initialized AI client")
     except Exception as e:
         logger.exception("Failed to initialize AI client")
         logger.exception("Exception type: %s", type(e).__name__)
         logger.exception("Traceback: %s", traceback.format_exc())
-        logger.info("Make sure you have valid credentials stored for user: %s", user_id)
+        logger.info(
+            "Make sure OPENAI_API_KEY environment variable is set. "
+            "Example: export OPENAI_API_KEY='sk-...'"
+        )
         return
 
     # Test 1: Chat completion

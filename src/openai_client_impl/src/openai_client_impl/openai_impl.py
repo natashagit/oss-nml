@@ -74,13 +74,15 @@ class OpenAIClient(ai_client_api.Client):
         self.credential_store = credential_store
 
         # Get API key in priority order: parameter -> environment -> database
+        api_key: str | None = None
         if openai_api_key:
-            api_key = openai_api_key
+            api_key = openai_api_key.strip()
             logger.debug("Using API key from parameter for user %s", user_id)
         else:
             # Try environment variable first
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
+            env_key = os.getenv("OPENAI_API_KEY")
+            if env_key:
+                api_key = env_key.strip()
                 logger.debug("Using API key from environment variable for user %s", user_id)
             else:
                 # Fall back to database (initialize store only when needed)
@@ -88,6 +90,7 @@ class OpenAIClient(ai_client_api.Client):
                     self.credential_store = CredentialStore()
                 api_key = self.credential_store.get_openai_api_key(user_id)
                 if api_key:
+                    api_key = api_key.strip()
                     logger.debug("Using API key from database for user %s", user_id)
 
         if not api_key:
