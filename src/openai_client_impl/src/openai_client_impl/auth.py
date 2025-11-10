@@ -44,7 +44,7 @@ class OAuthManager:
 
     def __init__(
         self,
-        credential_store: CredentialStore,
+        credential_store: CredentialStore | None = None,
         client_id: str | None = None,
         client_secret: str | None = None,
         redirect_uri: str | None = None,
@@ -52,7 +52,8 @@ class OAuthManager:
         """Initialize the OAuth manager.
 
         Args:
-            credential_store: CredentialStore instance for database operations.
+            credential_store: Optional CredentialStore instance for database operations.
+                            If None, tokens will not be stored in database (use sessions instead).
             client_id: Google OAuth client ID (or from GOOGLE_CLIENT_ID env var).
             client_secret: Google OAuth client secret (or from GOOGLE_CLIENT_SECRET env var).
             redirect_uri: OAuth redirect URI (or from OAUTH_REDIRECT_URI env var).
@@ -62,7 +63,7 @@ class OAuthManager:
         self.client_id = client_id or os.environ.get("GOOGLE_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("GOOGLE_CLIENT_SECRET")
         self.redirect_uri = redirect_uri or os.environ.get(
-            "OAUTH_REDIRECT_URI", "http://localhost:8000/oauth/callback",
+            "OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/oauth/callback",
         )
 
         if not self.client_id or not self.client_secret:
@@ -149,12 +150,13 @@ class OAuthManager:
             # Get user info
             user_info = self._get_user_info(credentials)
 
-            # Store Google refresh token in database
-            self.credential_store.store_user_credentials(
-                user_id=user_info["user_id"],
-                email=user_info["email"],
-                google_refresh_token=credentials.refresh_token,
-            )
+            # Store Google refresh token in database only if credential_store is provided
+            if self.credential_store is not None:
+                self.credential_store.store_user_credentials(
+                    user_id=user_info["user_id"],
+                    email=user_info["email"],
+                    google_refresh_token=credentials.refresh_token,
+                )
 
         except Exception as e:
             logger.exception("Failed to handle OAuth callback")
@@ -198,6 +200,10 @@ class OAuthManager:
             Refreshed Credentials object or None if refresh fails.
 
         """
+        if self.credential_store is None:
+            logger.warning("No credential store available for user %s", user_id)
+            return None
+
         refresh_token = self.credential_store.get_google_refresh_token(user_id)
         if not refresh_token:
             logger.warning("No refresh token found for user %s", user_id)

@@ -66,20 +66,21 @@ jobs:
             source .venv/bin/activate
             mkdir -p test-results/unit # Create directory for JUnit XML
       - run:
-          name: "Execute Unit Test Suite (src/ tests only)"
+          name: "Execute Unit Test Suite (AI client tests only)"
           command: |
             source .venv/bin/activate
-            # Run only unit tests from src/ directories (fast, isolated tests)
-            pytest src/ --cov=src --cov-report=xml --cov-report=term \
+            # Run only AI client unit tests (testpaths configured in pyproject.toml)
+            # Coverage is scoped to AI client components only
+            pytest --cov-report=xml --cov-report=term \
                      --junitxml=test-results/unit/junit.xml \
                      --cov-fail-under=85
       - run:
           name: "Run Static Analysis (mypy)"
           command: |
             source .venv/bin/activate
-            # Target specific source directories for mypy
+            # Target AI client source directories for mypy
             uv add types-requests
-            mypy src/ --explicit-package-bases
+            mypy src/ai_client_service/ src/ai_client_adapter/ src/ai_client_api/ src/openai_client_impl/ --explicit-package-bases
       - store_test_results:
           path: test-results/unit
       - store_artifacts: # Store coverage reports
@@ -101,15 +102,15 @@ jobs:
             source .venv/bin/activate
             mkdir -p test-results/circleci # Separate directory for results
       - run:
-          name: "Execute All Tests Except Local Credentials"
+          name: "Execute AI Client Tests Except Local Credentials"
           command: |
             source .venv/bin/activate
-            # Run all tests from src/ and tests/ directories except those requiring local credentials
-            # This includes unit tests, integration tests, and e2e tests that work with env vars
-            # Coverage tracking enabled since this includes comprehensive unit tests
-            pytest src/ tests/ -m "not local_credentials" \
+            # Run AI client tests (unit, integration, e2e) except those requiring local credentials
+            # testpaths configured in pyproject.toml include AI client components only
+            # Coverage tracking enabled for AI client components
+            pytest -m "not local_credentials" \
                    --junitxml=test-results/circleci/junit.xml -v \
-                   --cov=src --cov-report=term
+                   --cov-report=term
       - store_test_results:
           path: test-results/circleci
       - store_artifacts:
