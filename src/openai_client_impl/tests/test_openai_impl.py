@@ -1,5 +1,7 @@
 """Tests for OpenAI client implementation."""
 
+# ruff: noqa: ANN001, ANN201, PLR2004, SIM117
+
 import os
 from unittest.mock import Mock, patch
 
@@ -28,14 +30,14 @@ def mock_credential_store():
 class TestOpenAIClientInit:
     """Test OpenAIClient initialization."""
 
-    def test_init_with_api_key_parameter(self, mock_openai_client):
+    def test_init_with_api_key_parameter(self, mock_openai_client) -> None:
         """Test initialization with explicit API key parameter."""
         client = OpenAIClient(user_id="test_user", openai_api_key="test-key")
 
         assert client.user_id == "test_user"
         mock_openai_client.assert_called_once_with(api_key="test-key")
 
-    def test_init_with_env_variable(self, mock_openai_client):
+    def test_init_with_env_variable(self, mock_openai_client) -> None:
         """Test initialization with environment variable."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "env-test-key"}):
             client = OpenAIClient(user_id="test_user")
@@ -43,7 +45,7 @@ class TestOpenAIClientInit:
             assert client.user_id == "test_user"
             mock_openai_client.assert_called_once_with(api_key="env-test-key")
 
-    def test_init_with_database(self, mock_openai_client, mock_credential_store):
+    def test_init_with_database(self, mock_openai_client, mock_credential_store) -> None:
         """Test initialization with database credentials."""
         mock_credential_store.get_openai_api_key.return_value = "db-test-key"
 
@@ -54,7 +56,7 @@ class TestOpenAIClientInit:
             mock_credential_store.get_openai_api_key.assert_called_once_with("test_user")
             mock_openai_client.assert_called_once_with(api_key="db-test-key")
 
-    def test_init_with_project_and_org(self, mock_openai_client):
+    def test_init_with_project_and_org(self, mock_openai_client) -> None:
         """Test initialization with project and organization."""
         with patch.dict(
             os.environ,
@@ -73,7 +75,7 @@ class TestOpenAIClientInit:
                 organization="test-org",
             )
 
-    def test_init_no_api_key_raises_error(self, mock_credential_store):
+    def test_init_no_api_key_raises_error(self, mock_credential_store) -> None:
         """Test that initialization fails when no API key is found."""
         mock_credential_store.get_openai_api_key.return_value = None
 
@@ -81,9 +83,9 @@ class TestOpenAIClientInit:
             with pytest.raises(ValueError, match="No OpenAI API key found"):
                 OpenAIClient(user_id="test_user")
 
-    def test_init_strips_whitespace_from_api_key(self, mock_openai_client):
+    def test_init_strips_whitespace_from_api_key(self, mock_openai_client) -> None:
         """Test that API keys are stripped of whitespace."""
-        client = OpenAIClient(user_id="test_user", openai_api_key="  test-key  ")
+        OpenAIClient(user_id="test_user", openai_api_key="  test-key  ")
 
         mock_openai_client.assert_called_once_with(api_key="test-key")
 
@@ -91,7 +93,7 @@ class TestOpenAIClientInit:
 class TestChatCompletion:
     """Test chat completion functionality."""
 
-    def test_chat_completion_success(self, mock_openai_client):
+    def test_chat_completion_success(self, mock_openai_client) -> None:
         """Test successful chat completion."""
         # Setup mock response
         mock_response = Mock()
@@ -118,7 +120,7 @@ class TestChatCompletion:
         assert result.usage.total_tokens == 15
         assert result.finish_reason == "stop"
 
-    def test_chat_completion_with_params(self, mock_openai_client):
+    def test_chat_completion_with_params(self, mock_openai_client) -> None:
         """Test chat completion with custom parameters."""
         mock_response = Mock()
         mock_response.choices = [Mock()]
@@ -134,7 +136,7 @@ class TestChatCompletion:
         client = OpenAIClient(user_id="test_user", openai_api_key="test-key")
         messages = [ChatMessage(role="user", content="Test")]
         result = client.chat_completion(
-            messages, model="gpt-4", temperature=0.5, max_tokens=100
+            messages, model="gpt-4", temperature=0.5, max_tokens=100,
         )
 
         # Verify parameters were passed
@@ -146,7 +148,7 @@ class TestChatCompletion:
         )
         assert result.message.content == "Response"
 
-    def test_chat_completion_api_error(self, mock_openai_client):
+    def test_chat_completion_api_error(self, mock_openai_client) -> None:
         """Test chat completion when API returns an error."""
         mock_client_instance = Mock()
         mock_client_instance.chat.completions.create.side_effect = Exception("API Error")
@@ -158,7 +160,7 @@ class TestChatCompletion:
         with pytest.raises(Exception, match="API Error"):
             client.chat_completion(messages)
 
-    def test_chat_completion_no_usage(self, mock_openai_client):
+    def test_chat_completion_no_usage(self, mock_openai_client) -> None:
         """Test chat completion when usage data is missing."""
         mock_response = Mock()
         mock_response.choices = [Mock()]
@@ -184,7 +186,7 @@ class TestChatCompletion:
 class TestChatCompletionStream:
     """Test streaming chat completion functionality."""
 
-    def test_chat_completion_stream_success(self, mock_openai_client):
+    def test_chat_completion_stream_success(self, mock_openai_client) -> None:
         """Test successful streaming chat completion."""
         # Setup mock stream
         mock_chunk1 = Mock()
@@ -218,7 +220,7 @@ class TestChatCompletionStream:
         assert chunks[1].content == " world!"
         assert chunks[1].finish_reason == "stop"
 
-    def test_chat_completion_stream_empty_choices(self, mock_openai_client):
+    def test_chat_completion_stream_empty_choices(self, mock_openai_client) -> None:
         """Test streaming with empty choices (should be skipped)."""
         mock_chunk = Mock()
         mock_chunk.choices = []  # Empty choices
@@ -236,7 +238,7 @@ class TestChatCompletionStream:
         # Should skip empty chunks
         assert len(chunks) == 0
 
-    def test_chat_completion_stream_api_error(self, mock_openai_client):
+    def test_chat_completion_stream_api_error(self, mock_openai_client) -> None:
         """Test streaming when API returns an error."""
         mock_client_instance = Mock()
         mock_client_instance.chat.completions.create.side_effect = Exception("Stream Error")
@@ -252,7 +254,7 @@ class TestChatCompletionStream:
 class TestGetClientImpl:
     """Test get_client_impl function."""
 
-    def test_get_client_impl_returns_client(self, mock_openai_client):
+    def test_get_client_impl_returns_client(self, mock_openai_client) -> None:
         """Test that get_client_impl returns an OpenAIClient instance."""
         client = get_client_impl(user_id="test_user", openai_api_key="test-key")
 
@@ -263,7 +265,7 @@ class TestGetClientImpl:
 class TestRegister:
     """Test register function."""
 
-    def test_register_sets_get_client(self, mock_openai_client):
+    def test_register_sets_get_client(self, mock_openai_client) -> None:
         """Test that register sets up the get_client function."""
         import ai_client_api
 
