@@ -13,6 +13,16 @@ Every workspace component lives under `src/<component_name>/` and represents eit
 └── tests/              # optional component-scoped tests
 ```
 
+## AI Service Components
+
+The AI client service consists of five main components:
+
+1. **`ai_client_api`**: Abstract contract defining the `Client` ABC
+2. **`openai_client_impl`**: Concrete implementation using OpenAI's API
+3. **`ai_client_service`**: FastAPI service exposing REST endpoints
+4. **`ai_client_adapter`**: Adapter wrapping the generated service client
+5. **`ai_client_service_client`**: Auto-generated client from OpenAPI spec
+
 ## `pyproject.toml` Checklist
 - `[project]`: align `name` with the folder, set `version`, `description`, `readme = "README.md"`, `requires-python = ">=3.11"`, and list direct dependencies.
 - `[build-system]`: keep `hatchling` as the backend.

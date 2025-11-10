@@ -1,67 +1,68 @@
-"""Main module for demonstrating the mail client."""
-
-# ta-assignment/main.py
+"""Main module for demonstrating the AI client via the local implementation."""
 
 import contextlib
 import logging
+import traceback
 
-import mail_client_adapter
-import mail_client_api
+from ai_client_api.models import ChatMessage
 
-# Register the service adapter
-mail_client_adapter.register()
+import openai_client_impl  # noqa: F401  (auto-registers local implementation)
+from ai_client_api import get_client  # type: ignore[attr-defined]  # get_client is exported via __init__.py
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Initialize the client and demonstrate all mail client methods."""
-    client = mail_client_api.get_client()
+    """Initialize the client and demonstrate all AI client methods.
 
-    # Test 1: Get messages (existing functionality)
-    messages = list(client.get_messages(max_results=3))
+    This uses the local OpenAI implementation, which requires OPENAI_API_KEY
+    environment variable to be set.
+    """
+    user_id = "demo_user"
 
-    if not messages:
+    try:
+        client = get_client(user_id)
+        logger.info("Successfully initialized AI client")
+    except Exception as e:
+        logger.exception("Failed to initialize AI client")
+        logger.exception("Exception type: %s", type(e).__name__)
+        logger.exception("Traceback: %s", traceback.format_exc())
+        logger.info(
+            "Make sure OPENAI_API_KEY environment variable is set. "
+            "Example: export OPENAI_API_KEY='sk-...'",
+        )
         return
 
-    for _i, _msg in enumerate(messages, 1):
-        pass
+    # Test 1: Chat completion
+    messages = [ChatMessage(role="user", content="hello, how are you?")]
+    logger.info("Testing chat completion...")
+    with contextlib.suppress(Exception):
+        resp = client.chat_completion(messages, model="gpt-3.5-turbo-0125")
+        logger.info("%s", resp.message.content)
 
-    # Test 2: Get a specific message by ID
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            client.get_message(test_message_id)
-
-    # Test 3: Mark a message as read
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            success = client.mark_as_read(test_message_id)
-            if success:
-                pass
-            else:
+    # Test 2: Streaming chat completion
+    streaming_messages = [ChatMessage(role="user", content="Write two short sentences about a flight.")]
+    logger.info("Testing streaming chat completion...")
+    with contextlib.suppress(Exception):
+        for chunk in client.chat_completion_stream(streaming_messages, model="gpt-3.5-turbo-0125"):
+            if chunk.content:
                 pass
 
-    # Test 4: Delete a message (WARNING: This is destructive!)
-    # Only test if we have more than one message to avoid deleting all messages
-    if len(messages) > 1:
-        # Ask for confirmation before deleting
-        delete_message_id = messages[-1].id  # Delete the last message
-        try:
-            confirmation = input("Type 'DELETE' to confirm deletion: ")
-            if confirmation == "DELETE":
-                success = client.delete_message(delete_message_id)
-                if success:
-                    logger.info("Message with ID %s deleted.", delete_message_id)
-                else:
-                    logger.info("Failed to delete message with ID %s.", delete_message_id)
-        except EOFError:
-            # This means that CircleCI or another non-interactive environment is not going to actually delete anything
-            pass
-    else:
-        pass
+    # Test 3: Different model and parameters
+    advanced_messages = [
+        ChatMessage(role="system", content="You are a helpful coding assistant."),
+        ChatMessage(role="user", content="Explain what dependency injection is in one sentence."),
+    ]
+    logger.info("Testing advanced chat completion...")
+    with contextlib.suppress(Exception):
+        resp = client.chat_completion(
+            messages=advanced_messages,
+            model="gpt-3.5-turbo-0125",
+            temperature=0.3,
+            max_tokens=100,
+        )
+        logger.info("%s", resp.message.content)
 
     print("Demo complete.")  # noqa: T201
 
