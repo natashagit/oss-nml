@@ -1,13 +1,31 @@
 # ai-client-service-client
-A client library for accessing AI Client Service
+
+Auto-generated Python client library for the AI Client Service API.
+
+## Overview
+
+This package is automatically generated from the OpenAPI specification of the AI Client Service using `openapi-python-client`. It provides strongly-typed methods for interacting with all service endpoints.
+
+**Note**: This package is auto-generated. Do not edit it manually. To regenerate:
+
+```bash
+# Start the AI service
+uv run uvicorn ai_client_service.main:app --host 127.0.0.1 --port 8000
+
+# Generate the client
+uv run openapi-python-client generate \
+    --url http://127.0.0.1:8000/openapi.json \
+    --output src/ai_client_service_client
+```
 
 ## Usage
+
 First, create a client:
 
 ```python
 from ai_client_service_client import Client
 
-client = Client(base_url="https://api.example.com")
+client = Client(base_url="http://127.0.0.1:8000")
 ```
 
 If the endpoints you're going to hit require authentication, use `AuthenticatedClient` instead:
@@ -15,33 +33,55 @@ If the endpoints you're going to hit require authentication, use `AuthenticatedC
 ```python
 from ai_client_service_client import AuthenticatedClient
 
-client = AuthenticatedClient(base_url="https://api.example.com", token="SuperSecretToken")
+client = AuthenticatedClient(base_url="http://127.0.0.1:8000", token="SuperSecretToken")
 ```
 
 Now call your endpoint and use your models:
 
 ```python
-from ai_client_service_client.models import MyDataModel
-from ai_client_service_client.api.my_tag import get_my_data_model
+from ai_client_service_client.models import ChatCompletionRequest, ChatMessage
+from ai_client_service_client.api.default import create_chat_completion_chat_completions_post
 from ai_client_service_client.types import Response
 
 with client as client:
-    my_data: MyDataModel = get_my_data_model.sync(client=client)
-    # or if you need more info (e.g. status_code)
-    response: Response[MyDataModel] = get_my_data_model.sync_detailed(client=client)
+    # Create request
+    request = ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="Hello!")],
+        model="gpt-3.5-turbo"
+    )
+    
+    # Make request
+    response: Response[ChatCompletionResponse] = create_chat_completion_chat_completions_post.sync_detailed(
+        client=client,
+        body=request
+    )
+    
+    if response.parsed:
+        print(response.parsed.message.content)
 ```
 
 Or do the same thing with an async version:
 
 ```python
-from ai_client_service_client.models import MyDataModel
-from ai_client_service_client.api.my_tag import get_my_data_model
-from ai_client_service_client.types import Response
+from ai_client_service_client.models import ChatCompletionRequest, ChatMessage
+from ai_client_service_client.api.default import create_chat_completion_chat_completions_post
 
 async with client as client:
-    my_data: MyDataModel = await get_my_data_model.asyncio(client=client)
-    response: Response[MyDataModel] = await get_my_data_model.asyncio_detailed(client=client)
+    request = ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="Hello!")],
+        model="gpt-3.5-turbo"
+    )
+    
+    response = await create_chat_completion_chat_completions_post.asyncio(
+        client=client,
+        body=request
+    )
+    
+    if response:
+        print(response.message.content)
 ```
+
+## SSL Verification
 
 By default, when you're calling an HTTPS API it will attempt to verify that SSL is working correctly. Using certificate verification is highly recommended most of the time, but sometimes you may need to authenticate to a server (especially an internal server) using a custom certificate bundle.
 
@@ -63,20 +103,23 @@ client = AuthenticatedClient(
 )
 ```
 
-Things to know:
+## Key Features
+
 1. Every path/method combo becomes a Python module with four functions:
-    1. `sync`: Blocking request that returns parsed data (if successful) or `None`
-    1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
-    1. `asyncio`: Like `sync` but async instead of blocking
-    1. `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
+   - `sync`: Blocking request that returns parsed data (if successful) or `None`
+   - `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful
+   - `asyncio`: Like `sync` but async instead of blocking
+   - `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
 
-1. All path/query params, and bodies become method arguments.
-1. If your endpoint had any tags on it, the first tag will be used as a module name for the function (my_tag above)
-1. Any endpoint which did not have a tag will be in `ai_client_service_client.api.default`
+2. All path/query params, and bodies become method arguments.
 
-## Advanced customizations
+3. If your endpoint had any tags on it, the first tag will be used as a module name for the function.
 
-There are more settings on the generated `Client` class which let you control more runtime behavior, check out the docstring on that class for more info. You can also customize the underlying `httpx.Client` or `httpx.AsyncClient` (depending on your use-case):
+4. Any endpoint which did not have a tag will be in `ai_client_service_client.api.default`
+
+## Advanced Customizations
+
+There are more settings on the generated `Client` class which let you control more runtime behavior, check out the docstring on that class for more info. You can also customize the underlying `httpx.Client` or `httpx.AsyncClient`:
 
 ```python
 from ai_client_service_client import Client
@@ -89,35 +132,27 @@ def log_response(response):
     print(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
 
 client = Client(
-    base_url="https://api.example.com",
+    base_url="http://127.0.0.1:8000",
     httpx_args={"event_hooks": {"request": [log_request], "response": [log_response]}},
 )
-
-# Or get the underlying httpx client to modify directly with client.get_httpx_client() or client.get_async_httpx_client()
 ```
 
-You can even set the httpx client directly, but beware that this will override any existing settings (e.g., base_url):
+## Building / Publishing
 
-```python
-import httpx
-from ai_client_service_client import Client
+This project uses [uv](https://github.com/astral-sh/uv) to manage dependencies and packaging:
 
-client = Client(
-    base_url="https://api.example.com",
-)
-# Note that base_url needs to be re-set, as would any shared cookies, headers, etc.
-client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies="http://localhost:8030"))
-```
-
-## Building / publishing this package
-This project uses [uv](https://github.com/astral-sh/uv) to manage dependencies and packaging. Here are the basics:
 1. Update the metadata in `pyproject.toml` (e.g. authors, version).
 2. If you're using a private repository: https://docs.astral.sh/uv/guides/integration/alternative-indexes/
 3. Build a distribution with `uv build`, builds `sdist` and `wheel` by default.
-1. Publish the client with `uv publish`, see documentation for publishing to private indexes.
+4. Publish the client with `uv publish`, see documentation for publishing to private indexes.
 
-If you want to install this client into another project without publishing it (e.g. for development) then:
+If you want to install this client into another project without publishing it (e.g. for development):
+
 1. If that project **is using uv**, you can simply do `uv add <path-to-this-client>` from that project
-1. If that project is not using uv:
-    1. Build a wheel with `uv build --wheel`.
-    1. Install that wheel from the other project `pip install <path-to-wheel>`.
+2. If that project is not using uv:
+   - Build a wheel with `uv build --wheel`
+   - Install that wheel from the other project `pip install <path-to-wheel>`
+
+## Note for Developers
+
+This client is typically used by the `ai_client_adapter` package, which provides a higher-level interface. Most users should use the adapter rather than this client directly.

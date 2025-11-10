@@ -7,118 +7,115 @@ Concrete implementation of the `ai_client_api` using OpenAI's API with OAuth 2.0
 This package provides:
 - **OpenAIClient**: Implementation of the AI client that uses OpenAI's chat completion API
 - **OAuthManager**: Handles Google OAuth 2.0 authentication flow
-- **CredentialStore**: Securely stores user credentials in PostgreSQL with encryption
 
 ## Architecture
 
-1. **User Authentication**: Users authenticate via Google OAuth 2.0
-2. **Credential Storage**: Google refresh tokens and OpenAI API keys are encrypted and stored in PostgreSQL
-3. **API Access**: Each user's OpenAI API key is retrieved from the database and used to make API calls
+1. **User Authentication**: Users authenticate via Google OAuth 2.0 (handled by the service layer)
+2. **API Key Resolution**: OpenAI API keys are resolved in priority order:
+   - Explicit `openai_api_key` parameter
+   - `OPENAI_API_KEY` environment variable
+3. **API Access**: Each user's OpenAI API key is used to make API calls to OpenAI
 
 ## Setup
 
 ### Environment Variables
 
 ```bash
-# Google OAuth Configuration
+# Google OAuth Configuration (for OAuthManager)
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 OAUTH_REDIRECT_URI=http://localhost:8000/oauth/callback
 
-# Database Configuration
-DATABASE_URL=postgresql://user:password@localhost:5432/openai_service
-
-# Encryption Key (generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-ENCRYPTION_KEY=your_base64_encoded_fernet_key
+# OpenAI API Configuration
+OPENAI_API_KEY=sk-proj-...  # Used if not provided per-user
 ```
 
-### Database Setup
+### Installation
 
 ```bash
-# Create PostgreSQL database
-createdb openai_service
-
-# The schema will be created automatically on first run
+pip install -e src/ai_client_api
+pip install -e src/openai_client_impl
 ```
 
 ## Usage
 
-### Basic Usage
+### Basic Usage (Local Implementation)
 
 ```python
-from openai_client_impl import OpenAIClient, CredentialStore
-
-# Initialize credential store
-credential_store = CredentialStore()
+from openai_client_impl import OpenAIClient
+from ai_client_api.models import ChatMessage
 
 # Create client for a specific user
-client = OpenAIClient(user_id="google_user_123", credential_store=credential_store)
+# Will use OPENAI_API_KEY from environment if not provided
+client = OpenAIClient(user_id="user123", openai_api_key="sk-proj-...")
 
 # Generate a chat completion
 messages = [
-    {"role": "user", "content": "What is the capital of France?"}
+    ChatMessage(role="user", content="What is the capital of France?")
 ]
-response = client.chat_completion(messages)
-print(response["message"]["content"])
+response = client.chat_completion(messages, model="gpt-3.5-turbo")
+print(response.message.content)
 
 # Stream a chat completion
-for chunk in client.chat_completion_stream(messages):
-    print(chunk["content"], end="", flush=True)
-```
-
-### OAuth Flow
-
-```python
-from openai_client_impl import OAuthManager, CredentialStore
-
-credential_store = CredentialStore()
-oauth_manager = OAuthManager(credential_store)
-
-# Step 1: Get authorization URL
-auth_url, state = oauth_manager.get_authorization_url()
-print(f"Visit this URL to authorize: {auth_url}")
-
-# Step 2: After user authorizes, handle the callback
-# (callback_url is the full URL that Google redirects to)
-user_info = oauth_manager.handle_callback(
-    authorization_response=callback_url,
-    state=state
-)
-
-# Step 3: Store the user's OpenAI API key
-credential_store.store_user_credentials(
-    user_id=user_info["user_id"],
-    email=user_info["email"],
-    openai_api_key="sk-..."
-)
+for chunk in client.chat_completion_stream(messages, model="gpt-3.5-turbo"):
+    if chunk.content:
+        print(chunk.content, end="", flush=True)
 ```
 
 ### Registering with the API
 
 ```python
 import ai_client_api
-from openai_client_impl import register, CredentialStore
+from openai_client_impl import register
 
-# Register this implementation
-credential_store = CredentialStore()
-register(credential_store)
+# Register this implementation globally
+# This makes get_client() return OpenAIClient instances
+register()
 
 # Now you can use the abstract API
-client = ai_client_api.get_client(user_id="google_user_123")
+client = ai_client_api.get_client(user_id="user123")
+messages = [
+    ai_client_api.models.ChatMessage(role="user", content="Hello!")
+]
+response = client.chat_completion(messages)
 ```
+
+### OAuth Flow (Service Layer)
+
+OAuth authentication is typically handled by the `ai_client_service` layer. The `OAuthManager` can be used directly if needed:
+
+```python
+from openai_client_impl import OAuthManager
+
+oauth_manager = OAuthManager(credential_store=None)  # No database needed
+
+# Step 1: Get authorization URL
+auth_url, state = oauth_manager.get_authorization_url(state="random_state")
+print(f"Visit this URL to authorize: {auth_url}")
+
+# Step 2: After user authorizes, handle the callback
+user_info = oauth_manager.handle_callback(
+    authorization_response=callback_url,
+    state=state
+)
+print(f"Authenticated user: {user_info['user_id']}")
+```
+
+## API Key Resolution Priority
+
+The `OpenAIClient` resolves API keys in the following order:
+
+1. **Explicit parameter**: `openai_api_key` passed to constructor
+2. **Environment variable**: `OPENAI_API_KEY`
 
 ## Security Notes
 
-- All credentials are encrypted at rest using Fernet symmetric encryption
-- The `ENCRYPTION_KEY` should be kept secret and backed up securely
-- Use HTTPS in production for the OAuth redirect URI
-- Consider using environment-specific encryption keys for dev/staging/prod
+- API keys are never logged or exposed in error messages
+- Use HTTPS in production for OAuth redirect URIs
+- API keys should be kept secure and not committed to version control
 
 ## Dependencies
 
 - `openai`: OpenAI Python SDK
-- `psycopg2-binary`: PostgreSQL adapter
-- `sqlalchemy`: ORM for database operations
 - `google-auth`: Google authentication library
 - `google-auth-oauthlib`: OAuth 2.0 flow handler
-- `cryptography`: Encryption for credentials

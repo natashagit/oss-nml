@@ -1,5 +1,5 @@
-site_name: Mail Client Project
-site_description: "A professional-grade template for a modern Python project."
+site_name: AI Client Service
+site_description: "A professional-grade AI client service with OAuth 2.0 authentication and component-based architecture."
 
 theme:
   name: material
@@ -22,10 +22,12 @@ nav:
   - 'Overview': 'index.md'
   - 'Architecture': 'component.md'
   - 'API Reference':
-    - 'Message Protocol': 'api/message.md'
-    - 'Mail Client API': 'api/mail_client_api.md'
-    - 'Gmail Client Implementation': 'api/gmail_client_impl.md'
-    - 'Gmail Message Implementation': 'api/gmail_message_impl.md'
+    - 'AI Client API': 'api/ai_client_api.md'
+    - 'OpenAI Client Implementation': 'api/openai_client_impl.md'
+    - 'AI Client Service': 'api/ai_client_service.md'
+    - 'AI Client Adapter': 'api/ai_client_adapter.md'
+  - 'Testing': 'testing.md'
+  - 'CI/CD Setup': 'circleci-setup.md'
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -39,10 +41,10 @@ plugins:
           options:
             # This helps mkdocstrings find packages in the src directory
             search_paths: 
-              - src/message/src
-              - src/mail_client_api/src
-              - src/gmail_client_impl/src
-              - src/gmail_message_impl/src
+              - src/ai_client_api/src
+              - src/openai_client_impl/src
+              - src/ai_client_service/src
+              - src/ai_client_adapter/src
             show_source: false
             docstring_section_style: spacy
             members_order: source
