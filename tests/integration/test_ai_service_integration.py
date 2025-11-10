@@ -1,5 +1,6 @@
 """Integration tests for the complete AI service system."""
 
+import os
 from unittest.mock import Mock, patch
 
 import pytest
@@ -15,21 +16,26 @@ class TestAIServiceIntegration:
     @pytest.fixture
     def service_client(self) -> TestClient:
         """Create a test client for the AI service."""
+        # Set environment variables for OAuth
+        os.environ.setdefault("GOOGLE_CLIENT_ID", "test_client_id")
+        os.environ.setdefault("GOOGLE_CLIENT_SECRET", "test_client_secret")
         return TestClient(app)
 
     @pytest.fixture
     def mock_ai_client(self) -> Mock:
         """Create a mock AI client for testing."""
+        from ai_client_api.models import ChatCompletionResponse, ChatMessage, TokenUsage, ChatCompletionChunk
+
         mock_client = Mock()
-        mock_client.chat_completion.return_value = {
-            "message": {"role": "assistant", "content": "Hello! How can I help you?"},
-            "model": "gpt-3.5-turbo",
-            "usage": {"prompt_tokens": 10, "completion_tokens": 15, "total_tokens": 25},
-            "finish_reason": "stop",
-        }
+        mock_client.chat_completion.return_value = ChatCompletionResponse(
+            message=ChatMessage(role="assistant", content="Hello! How can I help you?"),
+            model="gpt-3.5-turbo",
+            usage=TokenUsage(prompt_tokens=10, completion_tokens=15, total_tokens=25),
+            finish_reason="stop",
+        )
         mock_client.chat_completion_stream.return_value = [
-            {"content": "Hello", "finish_reason": None, "model": "gpt-3.5-turbo"},
-            {"content": "!", "finish_reason": "stop", "model": "gpt-3.5-turbo"},
+            ChatCompletionChunk(content="Hello", finish_reason=None, model="gpt-3.5-turbo"),
+            ChatCompletionChunk(content="!", finish_reason="stop", model="gpt-3.5-turbo"),
         ]
         return mock_client
 
@@ -43,34 +49,36 @@ class TestAIServiceIntegration:
 
     def test_service_oauth_flow(self, service_client: TestClient) -> None:
         """Test the OAuth authorization flow."""
-        with patch("ai_client_service.main.OAuthManager") as mock_oauth:
-            mock_oauth.return_value.get_authorization_url.return_value = "https://example.com/auth"
+        response = service_client.get("/oauth/authorize", follow_redirects=False)
+        assert response.status_code == 307  # noqa: PLR2004
+        # Should redirect to Google OAuth URL
+        assert "accounts.google.com" in response.headers["location"]
 
-            response = service_client.get("/oauth/authorize")
-            assert response.status_code == 307  # noqa: PLR2004
-            assert "example.com" in response.headers["location"]
-
-    @patch("ai_client_service.main.get_ai_client")
-    def test_service_chat_completion(self, mock_get_client: Mock, service_client: TestClient, mock_ai_client: Mock) -> None:
+    def test_service_chat_completion(self, service_client: TestClient, mock_ai_client: Mock) -> None:
         """Test chat completion through the service."""
-        mock_get_client.return_value = mock_ai_client
+        from ai_client_service.dependencies import require_authenticated_client
 
-        request_data = {
-            "messages": [{"role": "user", "content": "Hello!"}],
-            "model": "gpt-3.5-turbo",
-            "temperature": 0.7,
-        }
+        app.dependency_overrides[require_authenticated_client] = lambda: mock_ai_client
 
-        response = service_client.post(
-            "/chat/completions?user_id=test_user",
-            json=request_data,
-        )
+        try:
+            request_data = {
+                "messages": [{"role": "user", "content": "Hello!"}],
+                "model": "gpt-3.5-turbo",
+                "temperature": 0.7,
+            }
 
-        assert response.status_code == 200  # noqa: PLR2004
-        data = response.json()
-        assert data["message"]["role"] == "assistant"
-        assert data["message"]["content"] == "Hello! How can I help you?"
-        assert data["model"] == "gpt-3.5-turbo"
+            response = service_client.post(
+                "/chat/completions",
+                json=request_data,
+            )
+
+            assert response.status_code == 200  # noqa: PLR2004
+            data = response.json()
+            assert data["message"]["role"] == "assistant"
+            assert data["message"]["content"] == "Hello! How can I help you?"
+            assert data["model"] == "gpt-3.5-turbo"
+        finally:
+            app.dependency_overrides.clear()
 
     def test_adapter_initialization(self) -> None:
         """Test that the adapter can be initialized."""
@@ -82,52 +90,58 @@ class TestAIServiceIntegration:
         assert adapter.base_url == "http://127.0.0.1:8000"
         assert adapter.user_id == "test_user"
 
-    def test_adapter_not_implemented_before_generation(self) -> None:
-        """Test that adapter methods raise NotImplementedError before client generation."""
+    def test_adapter_methods_are_implemented(self) -> None:
+        """Test that adapter methods are implemented and callable."""
         adapter = ServiceClient()
 
-        with pytest.raises(NotImplementedError):
-            adapter.chat_completion([{"role": "user", "content": "Hello"}])
+        # Methods should be callable (actual functionality tested elsewhere)
+        assert callable(adapter.chat_completion)
+        assert callable(adapter.chat_completion_stream)
+        assert callable(adapter.get_client)
 
-        with pytest.raises(NotImplementedError):
-            list(adapter.chat_completion_stream([{"role": "user", "content": "Hello"}]))
-
-        with pytest.raises(NotImplementedError):
-            adapter.get_client()
+        # get_client should return the underlying client
+        client = adapter.get_client()
+        assert client is not None
 
 
-    @patch("ai_client_service.main.get_ai_client")
-    def test_service_streaming_endpoint(self, mock_get_client: Mock, service_client: TestClient, mock_ai_client: Mock) -> None:
+    def test_service_streaming_endpoint(self, service_client: TestClient, mock_ai_client: Mock) -> None:
         """Test the streaming endpoint."""
-        mock_get_client.return_value = mock_ai_client
+        from ai_client_service.dependencies import require_authenticated_client
 
-        request_data = {
-            "messages": [{"role": "user", "content": "Tell me a story"}],
-            "model": "gpt-3.5-turbo",
-        }
+        app.dependency_overrides[require_authenticated_client] = lambda: mock_ai_client
 
-        response = service_client.post(
-            "/chat/completions/stream?user_id=test_user",
-            json=request_data,
-        )
+        try:
+            request_data = {
+                "messages": [{"role": "user", "content": "Tell me a story"}],
+                "model": "gpt-3.5-turbo",
+            }
 
-        assert response.status_code == 200  # noqa: PLR2004
-        # Note: Testing streaming responses requires more complex setup
+            response = service_client.post(
+                "/chat/completions/stream",
+                json=request_data,
+            )
+
+            assert response.status_code == 200  # noqa: PLR2004
+            # Note: Testing streaming responses requires more complex setup
+        finally:
+            app.dependency_overrides.clear()
 
     def test_service_error_handling(self, service_client: TestClient) -> None:
         """Test error handling in the service."""
-        # Test missing user_id parameter
+        # Test without authentication (no session, no API key)
         request_data = {
             "messages": [{"role": "user", "content": "Hello!"}],
         }
 
         response = service_client.post(
-            "/chat/completions",  # Missing user_id
+            "/chat/completions",
             json=request_data,
         )
 
-        # Should return 422 for missing required parameter
-        assert response.status_code == 422  # noqa: PLR2004
+        # Should return 401 for missing authentication
+        assert response.status_code == 401  # noqa: PLR2004
+        data = response.json()
+        assert "Authentication required" in data["detail"]
 
     def test_service_oauth_callback_success(self, service_client: TestClient) -> None:
         """Test successful OAuth callback."""
@@ -136,9 +150,8 @@ class TestAIServiceIntegration:
 
             mock_oauth.return_value.handle_callback.return_value = ("user123", {"access_token": "token"})
 
-            response = service_client.post(
-                "/oauth/callback",
-                json={"code": "auth_code", "state": "state"},
+            response = service_client.get(
+                "/oauth/callback?code=auth_code&state=state"
             )
 
             assert response.status_code == 200  # noqa: PLR2004
@@ -151,9 +164,8 @@ class TestAIServiceIntegration:
         with patch("ai_client_service.main.OAuthManager") as mock_oauth:
             mock_oauth.return_value.handle_callback.side_effect = Exception("OAuth error")
 
-            response = service_client.post(
-                "/oauth/callback",
-                json={"code": "invalid_code", "state": "state"},
+            response = service_client.get(
+                "/oauth/callback?code=invalid_code&state=state"
             )
 
             assert response.status_code == 200  # noqa: PLR2004
