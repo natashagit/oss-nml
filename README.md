@@ -295,6 +295,10 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
   docker-compose up --build -d
   ```
 
+- **Public Endpoint**:  
+  The deployed service is available over HTTPS at:  
+  👉 [https://oss-nml.onrender.com](https://oss-nml.onrender.com)
+
 - **Environment Variables**:  
   Required environment variables:
   - `GOOGLE_CLIENT_ID`: Google OAuth Client ID
