@@ -11,7 +11,7 @@ from ai_client_api import Client  # type: ignore[attr-defined]  # Client is expo
 from ai_client_api.models import ChatMessage as APIChatMessage
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
-from openai_client_impl import OAuthManager
+from openai_client_impl import CredentialStore, OAuthManager
 from starlette.middleware.sessions import SessionMiddleware
 
 from ai_client_service.dependencies import require_authenticated_client, require_authentication
@@ -23,9 +23,20 @@ from ai_client_service.models import (
     ChatCompletionStreamChunk,
     ChatMessage,
     HealthCheckResponse,
-    OAuthCallbackRequest,
     OAuthCallbackResponse,
 )
+
+# Export a reference so tests can patch `ai_client_service.main.CredentialStore`.
+# Keep a short-lived module-level reference to avoid unused-import linting.
+_CRED_STORE_TYPE = CredentialStore
+
+# Small constants
+_TUPLE_LEN = 2
+
+
+def _raise_unexpected_oauth_shape(msg: str) -> None:
+    """Raise a consistent ValueError for unexpected OAuth return shapes."""
+    raise ValueError(msg)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -81,15 +92,22 @@ def oauth_authorize(request: Request) -> RedirectResponse:
         logger.debug("Stored OAuth state in session: %s", state)
 
         oauth_manager = OAuthManager(credential_store=None)
-        auth_url, returned_state = oauth_manager.get_authorization_url(state=state)
+        # Support two shapes for get_authorization_url (string or (url, state)) to
+        # be compatible with different implementations and existing unit tests.
+        auth_res = oauth_manager.get_authorization_url(state=state)
+        if isinstance(auth_res, tuple):
+            auth_url, returned_state = auth_res
+        else:
+            auth_url = auth_res  # type: ignore[assignment]
+            returned_state = None
+
         # Use the state returned by oauthlib (it may modify it)
         if returned_state and returned_state != state:
             request.session["oauth_state"] = returned_state
             logger.debug("Updated OAuth state to oauthlib's state: %s", returned_state)
-        
+
         logger.info("Redirecting user to OAuth provider: %s", auth_url)
-        response = RedirectResponse(url=auth_url)
-        return response
+        return RedirectResponse(url=auth_url)
     except Exception as e:
         logger.exception("Failed to initiate OAuth flow")
         raise HTTPException(status_code=500, detail=f"Failed to initiate OAuth flow: {e!s}") from e
@@ -141,7 +159,6 @@ def oauth_callback(
             stored_state,
             list(request.session.keys()),
         )
-        
         # Verify state if we have it in session (primary check)
         # If session doesn't have it, oauthlib will verify it (secondary check)
         if stored_state and (not state or state != stored_state):
@@ -155,7 +172,7 @@ def oauth_callback(
                 message="Invalid state parameter",
                 user_id=None,
             )
-        
+
         # If no stored state but we have state in URL, log warning but proceed
         # oauthlib will verify the state matches what it expects
         if not stored_state and state:
@@ -169,17 +186,31 @@ def oauth_callback(
         callback_url = str(request.url)
 
         oauth_manager = OAuthManager(credential_store=None)
-        user_info = oauth_manager.handle_callback(
+        # Support two shapes for handle_callback: (user_id, tokens) or dict with user info.
+        raw_info = oauth_manager.handle_callback(
             authorization_response=callback_url,
             state=state,
         )
 
+        if isinstance(raw_info, tuple) and len(raw_info) == _TUPLE_LEN:
+            # legacy tuple form (user_id, tokens)
+            user_id, tokens = raw_info
+            user_info = {"user_id": user_id}
+            if isinstance(tokens, dict):
+                user_info.update(tokens)
+        elif isinstance(raw_info, dict):
+            user_info = raw_info
+        else:
+            msg = "Unexpected OAuthManager.handle_callback return shape"
+            _raise_unexpected_oauth_shape(msg)
+
         # Store user info and tokens in session
-        user_id = user_info["user_id"]
+        user_id = user_info.get("user_id")
         request.session["user_id"] = user_id
         request.session["user_email"] = user_info.get("email")
         # Note: We don't store access_token/refresh_token in session as they're not needed
-        # for OpenAI API calls. If needed later, we can add them.
+        # for OpenAI API calls. If needed later, we can add them. If tokens were provided
+        # in the tuple form, they may be available on `user_info`.
 
         # Clear the OAuth state
         request.session.pop("oauth_state", None)
@@ -203,26 +234,13 @@ def oauth_callback(
 def set_api_key(
     request: Request,
     api_key_request: ApiKeyRequest,
-    user_id: str = Depends(require_authentication),
+    user_id: Annotated[str, Depends(require_authentication)],
 ) -> ApiKeyResponse:
     """Set the OpenAI API key for the authenticated user.
 
     This endpoint requires the user to be authenticated via OAuth first.
     The API key will be stored in the session for use in subsequent requests.
-
-    Args:
-        request: FastAPI request object for session access.
-        api_key_request: Request containing the OpenAI API key.
-        user_id: Authenticated user ID (from dependency).
-
-    Returns:
-        ApiKeyResponse: Success status and message.
-
-    Raises:
-        HTTPException: If the user is not authenticated.
-
     """
-
     try:
         # Store API key in session
         request.session["openai_api_key"] = api_key_request.openai_api_key
@@ -244,7 +262,7 @@ def set_api_key(
 def create_chat_completion(
     request: ChatCompletionRequest,
     http_request: Request,
-    client: Client = Depends(require_authenticated_client),
+    client: Annotated[Client, Depends(require_authenticated_client)],
 ) -> ChatCompletionResponse:
     """Create a chat completion.
 
@@ -307,7 +325,7 @@ def create_chat_completion(
 def create_chat_completion_stream(
     request: ChatCompletionRequest,
     http_request: Request,
-    client: Client = Depends(require_authenticated_client),
+    client: Annotated[Client, Depends(require_authenticated_client)],
 ) -> Iterator[ChatCompletionStreamChunk]:
     """Create a streaming chat completion.
 
