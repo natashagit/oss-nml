@@ -1,7 +1,8 @@
 """End-to-end tests for the AI main.py module."""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 # Mock the database before importing main to avoid database connection errors
@@ -10,7 +11,7 @@ from unittest.mock import Mock, patch
 @patch("ai_client_api.get_client")
 def test_main_with_successful_client(mock_get_client: Mock, mock_cred_store: Mock) -> None:
     """Test main function with a successful client."""
-    from ai_client_api.models import ChatCompletionResponse, ChatMessage, TokenUsage, ChatCompletionChunk
+    from ai_client_api.models import ChatCompletionChunk, ChatCompletionResponse, ChatMessage, TokenUsage
 
     from main import main
 

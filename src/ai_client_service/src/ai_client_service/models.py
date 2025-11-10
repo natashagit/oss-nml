@@ -73,7 +73,9 @@ class ErrorResponse(BaseModel):
 class ApiKeyRequest(BaseModel):
     """Request model for setting OpenAI API key."""
 
-    openai_api_key: str = Field(..., description="OpenAI API key to store for the authenticated user")
+    openai_api_key: str = Field(
+        ..., description="OpenAI API key to store for the authenticated user",
+    )
 
 
 class ApiKeyResponse(BaseModel):

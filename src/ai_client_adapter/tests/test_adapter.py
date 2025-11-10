@@ -1,9 +1,7 @@
 """Tests for AI client adapter."""
 
 
-import pytest
 
-from ai_client_api.models import ChatMessage
 from ai_client_adapter.client_impl import ServiceClient
 
 

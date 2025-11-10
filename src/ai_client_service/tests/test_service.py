@@ -1,6 +1,7 @@
 """Tests for AI client service endpoints."""
 
 import os
+from typing import Never
 from unittest.mock import Mock, patch
 
 import pytest
@@ -60,7 +61,7 @@ def test_oauth_callback_success(client: TestClient) -> None:
         mock_oauth.return_value.handle_callback.return_value = ("user123", {"access_token": "token"})
 
         response = client.get(
-            "/oauth/callback?code=auth_code&state=state"
+            "/oauth/callback?code=auth_code&state=state",
         )
 
         assert response.status_code == 200  # noqa: PLR2004
@@ -75,7 +76,7 @@ def test_oauth_callback_failure(client: TestClient) -> None:
         mock_oauth.return_value.handle_callback.side_effect = Exception("OAuth error")
 
         response = client.get(
-            "/oauth/callback?code=invalid_code&state=state"
+            "/oauth/callback?code=invalid_code&state=state",
         )
 
         assert response.status_code == 200  # noqa: PLR2004
@@ -87,8 +88,8 @@ def test_oauth_callback_failure(client: TestClient) -> None:
 def test_chat_completion_success(client: TestClient, mock_ai_client: Mock) -> None:
     """Test successful chat completion with authentication and API key."""
     # Override the dependency to return our mock client
-    from ai_client_service.main import app
     from ai_client_service.dependencies import require_authenticated_client
+    from ai_client_service.main import app
 
     app.dependency_overrides[require_authenticated_client] = lambda: mock_ai_client
 
@@ -118,9 +119,10 @@ def test_chat_completion_success(client: TestClient, mock_ai_client: Mock) -> No
 
 def test_chat_completion_stream(client: TestClient, mock_ai_client: Mock) -> None:
     """Test streaming chat completion."""
-    from ai_client_service.main import app
-    from ai_client_service.dependencies import require_authenticated_client
     from ai_client_api.models import ChatCompletionChunk
+
+    from ai_client_service.dependencies import require_authenticated_client
+    from ai_client_service.main import app
 
     # Mock the streaming response
     mock_ai_client.chat_completion_stream.return_value = [
@@ -154,15 +156,16 @@ def test_chat_completion_stream(client: TestClient, mock_ai_client: Mock) -> Non
 
 def test_chat_completion_missing_user_id(client: TestClient) -> None:
     """Test chat completion when user is not authenticated."""
-    from ai_client_service.main import app
-    from ai_client_service.dependencies import require_authenticated_client
     from fastapi import HTTPException
 
-    def mock_auth_error():
+    from ai_client_service.dependencies import require_authenticated_client
+    from ai_client_service.main import app
+
+    def mock_auth_error() -> Never:
         # Mimic the behavior of require_authenticated_client when API key is missing
         raise HTTPException(
             status_code=400,
-            detail="OpenAI API key not set. Please set your API key using POST /api-keys"
+            detail="OpenAI API key not set. Please set your API key using POST /api-keys",
         )
 
     app.dependency_overrides[require_authenticated_client] = mock_auth_error

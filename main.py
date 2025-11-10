@@ -4,9 +4,10 @@ import contextlib
 import logging
 import traceback
 
+from ai_client_api.models import ChatMessage
+
 import openai_client_impl  # noqa: F401  (auto-registers local implementation)
 from ai_client_api import get_client  # type: ignore[attr-defined]  # get_client is exported via __init__.py
-from ai_client_api.models import ChatMessage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Initialize the client and demonstrate all AI client methods.
-    
+
     This uses the local OpenAI implementation, which requires OPENAI_API_KEY
     environment variable to be set.
     """
@@ -29,7 +30,7 @@ def main() -> None:
         logger.exception("Traceback: %s", traceback.format_exc())
         logger.info(
             "Make sure OPENAI_API_KEY environment variable is set. "
-            "Example: export OPENAI_API_KEY='sk-...'"
+            "Example: export OPENAI_API_KEY='sk-...'",
         )
         return
 

@@ -10,6 +10,7 @@ class ChatMessage:
     Attributes:
         role: The role of the message sender (e.g., 'system', 'user', 'assistant').
         content: The content of the message.
+
     """
 
     role: str
@@ -24,6 +25,7 @@ class TokenUsage:
         prompt_tokens: Number of tokens in the prompt.
         completion_tokens: Number of tokens in the completion.
         total_tokens: Total number of tokens used.
+
     """
 
     prompt_tokens: int
@@ -40,6 +42,7 @@ class ChatCompletionResponse:
         model: The model used for generation.
         usage: Token usage information.
         finish_reason: Reason why the model stopped generating (e.g., 'stop', 'length').
+
     """
 
     message: ChatMessage
@@ -56,6 +59,7 @@ class ChatCompletionChunk:
         content: The text delta for this chunk.
         finish_reason: Reason for stopping (present in final chunk only).
         model: The model being used.
+
     """
 
     content: str

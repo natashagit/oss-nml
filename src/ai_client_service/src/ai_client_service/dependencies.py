@@ -2,9 +2,11 @@
 
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
-from ai_client_api import Client, get_client  # type: ignore[attr-defined]  # Exported via __init__.py
+from ai_client_api import (  # type: ignore[attr-defined]  # Exported via __init__.py
+    Client,
+    get_client,
+)
 from fastapi import Depends, HTTPException
 from openai_client_impl import OpenAIClient
 from starlette.requests import Request

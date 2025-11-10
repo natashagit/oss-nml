@@ -24,7 +24,7 @@ class TestAIServiceIntegration:
     @pytest.fixture
     def mock_ai_client(self) -> Mock:
         """Create a mock AI client for testing."""
-        from ai_client_api.models import ChatCompletionResponse, ChatMessage, TokenUsage, ChatCompletionChunk
+        from ai_client_api.models import ChatCompletionChunk, ChatCompletionResponse, ChatMessage, TokenUsage
 
         mock_client = Mock()
         mock_client.chat_completion.return_value = ChatCompletionResponse(
@@ -151,7 +151,7 @@ class TestAIServiceIntegration:
             mock_oauth.return_value.handle_callback.return_value = ("user123", {"access_token": "token"})
 
             response = service_client.get(
-                "/oauth/callback?code=auth_code&state=state"
+                "/oauth/callback?code=auth_code&state=state",
             )
 
             assert response.status_code == 200  # noqa: PLR2004
@@ -165,7 +165,7 @@ class TestAIServiceIntegration:
             mock_oauth.return_value.handle_callback.side_effect = Exception("OAuth error")
 
             response = service_client.get(
-                "/oauth/callback?code=invalid_code&state=state"
+                "/oauth/callback?code=invalid_code&state=state",
             )
 
             assert response.status_code == 200  # noqa: PLR2004

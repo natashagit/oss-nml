@@ -15,6 +15,8 @@ from ai_client_service_client.api.default import (
 from ai_client_service_client.client import Client as GeneratedClient
 from ai_client_service_client.models.chat_completion_request import ChatCompletionRequest
 from ai_client_service_client.models.chat_message import ChatMessage as ServiceChatMessage
+from ai_client_service_client.models.http_validation_error import HTTPValidationError
+from ai_client_service_client.types import Unset
 
 
 class ServiceClient(Client):
@@ -76,28 +78,36 @@ class ServiceClient(Client):
 
         # Handle error responses
         if response is None:
-            raise ValueError("Received None response from service")
-        
+            msg = "Received None response from service"
+            raise ValueError(msg)
+
         # Check if it's an HTTPValidationError (imported from generated client)
-        from ai_client_service_client.models.http_validation_error import HTTPValidationError
         if isinstance(response, HTTPValidationError):
-            raise ValueError(f"Validation error: {response}")
+            msg = f"Validation error: {response}"
+            raise TypeError(msg)
 
         # Convert service response to domain models
         finish_reason: str | None = None
         if hasattr(response.finish_reason, "__class__"):
             # Handle Unset type from generated client
-            from ai_client_service_client.types import Unset
             if not isinstance(response.finish_reason, Unset):
-                finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
+                finish_reason = (
+                    str(response.finish_reason)
+                    if response.finish_reason is not None
+                    else None
+                )
         else:
-            finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
+            finish_reason = (
+                str(response.finish_reason)
+                if response.finish_reason is not None
+                else None
+            )
 
         # Access usage as dictionary (ChatCompletionResponseUsage uses additional_properties)
         # The usage object supports dictionary-like access via __getitem__
-        prompt_tokens = response.usage["prompt_tokens"] if "prompt_tokens" in response.usage else 0
-        completion_tokens = response.usage["completion_tokens"] if "completion_tokens" in response.usage else 0
-        total_tokens = response.usage["total_tokens"] if "total_tokens" in response.usage else 0
+        prompt_tokens = response.usage.get("prompt_tokens", 0)
+        completion_tokens = response.usage.get("completion_tokens", 0)
+        total_tokens = response.usage.get("total_tokens", 0)
 
         return ChatCompletionResponse(
             message=ChatMessage(
@@ -161,9 +171,8 @@ class ServiceClient(Client):
                 model=model,
             )
             return
-        
+
         # Check if it's an HTTPValidationError
-        from ai_client_service_client.models.http_validation_error import HTTPValidationError
         if isinstance(response, HTTPValidationError):
             yield ChatCompletionChunk(
                 content=f"Validation error: {response}",
@@ -175,11 +184,18 @@ class ServiceClient(Client):
         # Simulate streaming by yielding the response as a single chunk
         finish_reason: str | None = None
         if hasattr(response.finish_reason, "__class__"):
-            from ai_client_service_client.types import Unset
             if not isinstance(response.finish_reason, Unset):
-                finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
+                finish_reason = (
+                    str(response.finish_reason)
+                    if response.finish_reason is not None
+                    else None
+                )
         else:
-            finish_reason = str(response.finish_reason) if response.finish_reason is not None else None
+            finish_reason = (
+                str(response.finish_reason)
+                if response.finish_reason is not None
+                else None
+            )
 
         yield ChatCompletionChunk(
             content=response.message.content,

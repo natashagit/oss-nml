@@ -12,7 +12,7 @@ This allows for flexible deployment scenarios while maintaining OAuth support.
 import logging
 import os
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import ai_client_api
 from ai_client_api.models import (
@@ -26,7 +26,8 @@ from openai import OpenAI, Stream
 from openai_client_impl.database import CredentialStore
 
 if TYPE_CHECKING:
-    from openai.types.chat import ChatCompletion, ChatCompletionChunk as OpenAIChatCompletionChunk
+    from openai.types.chat import ChatCompletion
+    from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
 
 logger = logging.getLogger(__name__)
 
