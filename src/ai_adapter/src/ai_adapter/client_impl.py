@@ -45,7 +45,7 @@ class ServiceClient(AIInterface):
         result = response.result
         if isinstance(result, str):
             return result
-        return cast(dict[str, Any], result)
+        return cast("dict[str, Any]", result)
 
 
 def register(base_url: str = "http://127.0.0.1:8000") -> None:

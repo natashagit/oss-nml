@@ -7,12 +7,14 @@ It handles API key authentication and provides methods to generate responses fro
 import json
 import logging
 import os
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any
 
 import ai_api
 from ai_api import AIInterface
 from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam
+
+if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletionMessageParam
 
 
 class OpenAIClient(AIInterface):
@@ -101,6 +103,7 @@ class OpenAIClient(AIInterface):
             {"role": "user", "content": user_input},
         ]
 
+        content: str | None = None
         try:
             if response_schema:
                 # Use structured output mode with proper JSON schema format
@@ -141,12 +144,15 @@ class OpenAIClient(AIInterface):
                 messages=messages,
             )
             content = response.choices[0].message.content
-            return content if content is not None else ""
 
         except Exception as e:
             self.logger.exception("Failed to generate response from OpenAI")
             error_msg = f"Failed to generate response: {e}"
             raise RuntimeError(error_msg) from e
+        else:
+            if content is None:
+                return ""
+            return content
 
 
 def get_client_impl(api_key: str | None = None) -> AIInterface:
