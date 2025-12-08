@@ -3,6 +3,7 @@
 import os
 from typing import Any
 
+from dotenv import load_dotenv
 import openai_impl  # noqa: F401 - registers default impl
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from fastapi import FastAPI, HTTPException
@@ -14,6 +15,9 @@ app = FastAPI(
     description="FastAPI wrapper around AI interface",
     version="0.1.0",
 )
+
+# Load environment variables from .env if present
+load_dotenv()
 
 
 @app.get("/health", response_model=HealthCheckResponse)
