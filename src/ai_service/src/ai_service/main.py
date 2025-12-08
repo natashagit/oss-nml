@@ -30,7 +30,7 @@ def health() -> HealthCheckResponse:
 def generate(request: GenerateRequest) -> GenerateResponse:
     """Generate a response using the registered AI interface."""
     try:
-        client: AIInterface = get_client("default_user")  # type: ignore[assignment]
+        client: AIInterface = get_client()  # type: ignore[assignment]
     except Exception as exc:  # pragma: no cover - runtime wiring issues
         raise HTTPException(status_code=500, detail=f"Failed to load AI client: {exc!s}") from exc
 

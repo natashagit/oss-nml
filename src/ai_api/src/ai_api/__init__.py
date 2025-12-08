@@ -27,8 +27,8 @@ class AIInterface(ABC):
         raise NotImplementedError
 
 
-def get_client(user_id: str) -> AIInterface:
-    """Return an instance of an AI client for the specified user."""
+def get_client() -> AIInterface:
+    """Return an instance of an AI client."""
     raise NotImplementedError
 
 

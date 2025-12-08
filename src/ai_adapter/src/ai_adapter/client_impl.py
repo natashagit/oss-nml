@@ -40,7 +40,7 @@ class ServiceClient(AIInterface):
 def register(base_url: str = "http://127.0.0.1:8000") -> None:
     """Register the service adapter as the default AI client."""
 
-    def _get_client(user_id: str) -> AIInterface:  # noqa: ARG001 - parity with ai_api.get_client
+    def _get_client() -> AIInterface:
         return ServiceClient(base_url=base_url)
 
-    ai_api.get_client = _get_client  # type: ignore[assignment]
+    ai_api.get_client = _get_client

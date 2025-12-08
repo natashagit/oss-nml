@@ -151,7 +151,7 @@ def get_client_impl(api_key: str | None = None) -> AIInterface:
 def register(api_key: str | None = None) -> None:
     """Register the OpenAI client implementation with the AI API."""
 
-    def _get_client(user_id: str) -> AIInterface:  # noqa: ARG001 - parity with ai_api.get_client
+    def _get_client() -> AIInterface:
         return get_client_impl(api_key=api_key)
 
     ai_api.get_client = _get_client  # type: ignore[assignment]
