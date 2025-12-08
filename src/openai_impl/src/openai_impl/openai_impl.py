@@ -149,10 +149,10 @@ class OpenAIClient(AIInterface):
             self.logger.exception("Failed to generate response from OpenAI")
             error_msg = f"Failed to generate response: {e}"
             raise RuntimeError(error_msg) from e
-        else:
-            if content is None:
-                return ""
-            return content
+
+        if content is None:
+            return ""
+        return content
 
 
 def get_client_impl(api_key: str | None = None) -> AIInterface:
