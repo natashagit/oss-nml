@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import pytest
 from ai_adapter.client_impl import ServiceClient
 from ai_service_client.models.generate_response import GenerateResponse
 
@@ -27,38 +28,34 @@ def test_generate_response_validation_error_raises() -> None:
 
     svc = ServiceClient(base_url="http://example.com")
 
-    with patch(
-        "ai_adapter.client_impl.generate_generate_post.sync",
-        return_value=HTTPValidationError(detail=[]),
+    with (
+        patch(
+            "ai_adapter.client_impl.generate_generate_post.sync",
+            return_value=HTTPValidationError(detail=[]),
+        ),
+        pytest.raises(TypeError, match="Validation error"),
     ):
-        try:
-            svc.generate_response("hi", "be short")
-        except RuntimeError as exc:
-            assert "Validation error" in str(exc)
-        else:
-            raise AssertionError("Expected RuntimeError")
+        svc.generate_response("hi", "be short")
 
 
 def test_generate_response_none_raises() -> None:
     """Adapter raises when service returns None."""
     svc = ServiceClient(base_url="http://example.com")
 
-    with patch(
-        "ai_adapter.client_impl.generate_generate_post.sync",
-        return_value=None,
+    with (
+        patch(
+            "ai_adapter.client_impl.generate_generate_post.sync",
+            return_value=None,
+        ),
+        pytest.raises(RuntimeError, match="No response"),
     ):
-        try:
-            svc.generate_response("hi", "be short")
-        except RuntimeError as exc:
-            assert "No response" in str(exc)
-        else:
-            raise AssertionError("Expected RuntimeError")
+        svc.generate_response("hi", "be short")
 
 
 def test_register_sets_get_client() -> None:
-    """register wires ai_api.get_client to ServiceClient."""
-    import ai_api
+    """Register wires ai_api.get_client to ServiceClient."""
     import ai_adapter
+    import ai_api
 
     ai_adapter.register(base_url="http://example.com")
     client = ai_api.get_client()

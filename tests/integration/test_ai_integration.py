@@ -3,11 +3,12 @@
 from typing import Any
 from unittest.mock import patch
 
+from ai_service.main import app
+from fastapi.testclient import TestClient
+
 import ai_adapter
 import ai_api
 from ai_api import AIInterface
-from ai_service.main import app
-from fastapi.testclient import TestClient
 
 
 class DummyAIClient(AIInterface):
@@ -19,6 +20,7 @@ class DummyAIClient(AIInterface):
         system_prompt: str,
         response_schema: dict[str, Any] | None = None,
     ) -> str | dict[str, Any]:
+        """Return an echo-like structured response."""
         return {"echo": user_input, "prompt": system_prompt}
 
 
@@ -27,15 +29,15 @@ def test_adapter_calls_service_with_mocked_impl() -> None:
     tc = TestClient(app)
 
     class FakeHTTPXClient:
-        def request(  # noqa: ANN001
+        def request(
             self,
             method: str,
             url: str,
-            data: bytes | None = None,
+            data: Any = None,
             headers: dict[str, str] | None = None,
             json: Any | None = None,
             **_: object,
-        ):
+        ) -> Any:
             if json is not None:
                 return tc.request(method, url, json=json, headers=headers)
             if headers and headers.get("Content-Type") == "application/json" and data:

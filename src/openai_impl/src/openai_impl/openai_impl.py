@@ -4,21 +4,24 @@ This module provides a concrete implementation of the AI API using the OpenAI AP
 It handles API key authentication and provides methods to generate responses from OpenAI's models.
 """
 
+import json
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 import ai_api
 from ai_api import AIInterface
 from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 
 class OpenAIClient(AIInterface):
     """Concrete implementation of the AIInterface abstraction using OpenAI API.
 
-    This class provides a complete implementation of the ai_api.AIInterface abstraction
-    using OpenAI's API. It handles API key authentication automatically and provides
-    methods to generate both conversational and structured responses.
+    This class provides a complete implementation of the ai_api.AIInterface
+    abstraction using OpenAI's API. It handles API key authentication
+    automatically and provides methods to generate both conversational and
+    structured responses.
 
     Attributes:
         client: The authenticated OpenAI client object.
@@ -26,6 +29,7 @@ class OpenAIClient(AIInterface):
 
     Environment Variables:
         - OPENAI_API_KEY: OpenAI API key (required)
+
     """
 
     DEFAULT_MODEL = "gpt-4o-mini"
@@ -37,6 +41,7 @@ class OpenAIClient(AIInterface):
         Args:
             api_key: Optional API key. If not provided, reads from OPENAI_API_KEY env var.
             model: Optional model name. Defaults to gpt-4o-mini.
+
         """
         self.logger = logging.getLogger(__name__)
         self.model = model or self.DEFAULT_MODEL
@@ -68,13 +73,13 @@ class OpenAIClient(AIInterface):
         either a conversational string or a structured tool call based on the response_schema.
 
         :param user_input: The text provided by the user.
-        :param system_prompt: The instruction set (e.g., "You are a helpful assistant...").
-        :param response_schema: An optional JSON schema (dict).
-                                If provided, the AI must return a structured Dict matching this schema.
-                                The schema should include a "name", "description", and "schema" field.
-                                If None, the AI returns a conversational String.
+        :param system_prompt: Instructional system prompt.
+        :param response_schema: Optional JSON schema dict. If provided, the AI must
+            return a structured dict. The schema should include a "name",
+            "description", and "schema" field. If None, the AI returns a
+            conversational string.
 
-        :return: A string (conversation) or a Dict (structured action data).
+        :return: A string (conversation) or a dict (structured action data).
 
         Example response_schema format:
             {
@@ -91,7 +96,7 @@ class OpenAIClient(AIInterface):
                 }
             }
         """
-        messages = [
+        messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_input},
         ]
@@ -102,7 +107,8 @@ class OpenAIClient(AIInterface):
                 # The response_schema should have name, description, and schema fields
                 schema_name = response_schema.get("name", "structured_output")
                 schema_description = response_schema.get(
-                    "description", "Structured output schema"
+                    "description",
+                    "Structured output schema",
                 )
                 json_schema = response_schema.get("schema", response_schema)
 
@@ -126,8 +132,6 @@ class OpenAIClient(AIInterface):
 
                 content = response.choices[0].message.content
                 if content:
-                    import json
-
                     return json.loads(content)  # type: ignore[no-any-return]
                 return {}
 
@@ -136,11 +140,13 @@ class OpenAIClient(AIInterface):
                 model=self.model,
                 messages=messages,
             )
-            return response.choices[0].message.content or ""  # type: ignore[return-value]
+            content = response.choices[0].message.content
+            return content if content is not None else ""
 
         except Exception as e:
             self.logger.exception("Failed to generate response from OpenAI")
-            raise RuntimeError(f"Failed to generate response: {e}") from e
+            error_msg = f"Failed to generate response: {e}"
+            raise RuntimeError(error_msg) from e
 
 
 def get_client_impl(api_key: str | None = None) -> AIInterface:
