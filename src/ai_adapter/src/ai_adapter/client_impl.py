@@ -1,12 +1,13 @@
 """Adapter that calls the AI FastAPI service via generated client."""
 
-from typing import Any
+from typing import Any, cast
 
 import ai_api
 from ai_api import AIInterface
 from ai_service_client import Client as GeneratedClient
 from ai_service_client.api.default import generate_generate_post
 from ai_service_client.models.generate_request import GenerateRequest
+from ai_service_client.models.http_validation_error import HTTPValidationError
 
 
 class ServiceClient(AIInterface):
@@ -24,7 +25,7 @@ class ServiceClient(AIInterface):
         body = GenerateRequest(
             user_input=user_input,
             system_prompt=system_prompt,
-            response_schema=response_schema,
+            response_schema=cast(Any, response_schema),
         )
         response = generate_generate_post.sync(
             client=self.client,
@@ -33,6 +34,8 @@ class ServiceClient(AIInterface):
 
         if response is None:
             raise RuntimeError("No response returned from AI service")
+        if isinstance(response, HTTPValidationError):
+            raise RuntimeError(f"Validation error from AI service: {response}")
 
         return response.result
 

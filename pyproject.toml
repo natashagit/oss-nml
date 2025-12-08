@@ -87,7 +87,11 @@ pythonpath = [
     ".", 
     "src"
 ]
-testpaths = ["tests", "src/*/tests"]
+testpaths = [
+    "src/ai_service/tests",
+    "src/ai_adapter/tests",
+    "src/openai_impl/tests",
+]
 addopts = ["--cov", "--cov-report=term-missing", "--import-mode=importlib"]
 markers = [
     "unit: marks tests as unit tests (fast, isolated)",
@@ -103,6 +107,8 @@ omit = [
     "*/tests/*",                
     "*/__main__.py",            
     "src/mail_client_service_client/*", # Auto-generated OpenAPI client, tested indirectly
+    "src/ai_service_client/*",
+    "src/openai_impl/*",
 ]
 
 
