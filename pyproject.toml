@@ -90,7 +90,10 @@ pythonpath = [
 testpaths = [
     "src/ai_service/tests",
     "src/ai_adapter/tests",
+    "src/ai_api/tests",
     "src/openai_impl/tests",
+    "tests/integration",
+    "tests/e2e",
 ]
 addopts = ["--cov", "--cov-report=term-missing", "--import-mode=importlib"]
 markers = [
@@ -108,7 +111,10 @@ omit = [
     "*/__main__.py",            
     "src/mail_client_service_client/*", # Auto-generated OpenAPI client, tested indirectly
     "src/ai_service_client/*",
-    "src/openai_impl/*",
+    "src/mail_client_api/*",
+    "src/mail_client_adapter/*",
+    "src/mail_client_service/*",
+    "src/gmail_client_impl/*",
 ]
 
 
