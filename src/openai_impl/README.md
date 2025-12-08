@@ -54,26 +54,97 @@ response = client.generate_response(
 print(response)
 ```
 
-### Structured Output
+### Structured Output for Intent Detection and Tool Calling
+
+The OpenAI implementation supports structured outputs using JSON Schema, which is perfect for analyzing user input, determining intent, and extracting structured data for tool calls.
+
 ```python
 import openai_impl
 
 client = openai_impl.OpenAIClient()
 
-schema = {
-    "type": "object",
-    "properties": {
-        "temperature": {"type": "number"},
-        "conditions": {"type": "string"}
+# Define a schema for email action intent detection
+email_action_schema = {
+    "name": "email_action",
+    "description": "Extract email action intent and parameters from user input",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "action": {
+                "type": "string",
+                "enum": ["delete", "mark_as_read", "get_message", "list_messages"],
+                "description": "The email action the user wants to perform"
+            },
+            "message_id": {
+                "type": "string",
+                "description": "The ID of the message to act upon (if applicable)"
+            },
+            "max_results": {
+                "type": "integer",
+                "description": "Maximum number of messages to retrieve (for list_messages)"
+            }
+        },
+        "required": ["action"],
+        "additionalProperties": False
+    }
+}
+
+# User says: "Delete the email with ID 12345"
+response = client.generate_response(
+    user_input="Delete the email with ID 12345",
+    system_prompt="You are an AI that extracts email action intents from user requests.",
+    response_schema=email_action_schema
+)
+
+print(response)
+# Output: {"action": "delete", "message_id": "12345"}
+```
+
+### Multi-Intent Detection
+
+```python
+# Schema for detecting multiple possible actions
+multi_action_schema = {
+    "name": "intent_detection",
+    "description": "Detect user intent and extract relevant parameters",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "intent": {
+                "type": "string",
+                "enum": ["email_management", "weather_query", "calendar_event", "general_conversation"]
+            },
+            "confidence": {
+                "type": "number",
+                "description": "Confidence score between 0 and 1"
+            },
+            "parameters": {
+                "type": "object",
+                "description": "Intent-specific parameters",
+                "additionalProperties": True
+            }
+        },
+        "required": ["intent", "confidence"],
+        "additionalProperties": False
     }
 }
 
 response = client.generate_response(
-    user_input="What is the weather in NYC?",
-    system_prompt="Extract weather information.",
-    response_schema=schema
+    user_input="Show me my last 5 unread emails",
+    system_prompt="Analyze the user's intent and extract relevant parameters.",
+    response_schema=multi_action_schema
 )
-print(response)  # Returns a dict matching the schema
+
+print(response)
+# Output: {
+#   "intent": "email_management",
+#   "confidence": 0.95,
+#   "parameters": {
+#     "action": "list_messages",
+#     "filter": "unread",
+#     "count": 5
+#   }
+# }
 ```
 
 ## Authentication Setup
