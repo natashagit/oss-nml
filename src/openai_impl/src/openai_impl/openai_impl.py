@@ -8,6 +8,7 @@ import logging
 import os
 from typing import Any
 
+import ai_api
 from ai_api import AIInterface
 from openai import OpenAI
 
@@ -142,16 +143,15 @@ class OpenAIClient(AIInterface):
             raise RuntimeError(f"Failed to generate response: {e}") from e
 
 
-def get_ai_impl() -> AIInterface:
+def get_client_impl(api_key: str | None = None) -> AIInterface:
     """Return a configured :class:`OpenAIClient` instance."""
-    return OpenAIClient()
+    return OpenAIClient(api_key=api_key)
 
 
-def register() -> None:
-    """Register the OpenAI client implementation with the AI API.
+def register(api_key: str | None = None) -> None:
+    """Register the OpenAI client implementation with the AI API."""
 
-    Note: This is a placeholder for future dependency injection if needed.
-    Currently, the AIInterface is meant to be used directly.
-    """
-    # Future: Implement dependency injection similar to mail_client_api
-    pass
+    def _get_client(user_id: str) -> AIInterface:  # noqa: ARG001 - parity with ai_api.get_client
+        return get_client_impl(api_key=api_key)
+
+    ai_api.get_client = _get_client  # type: ignore[assignment]

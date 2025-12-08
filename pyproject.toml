@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Template repository for a mail client"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "ai-api",
+    "openai-impl",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -27,6 +30,9 @@ members = [
   "src/mail_client_service",
   "src/mail_client_adapter",
   "src/mail_client_service_client",
+  "src/ai_api",
+  "src/openai_impl",
+  "src/ai_service",
 ]
 
 [tool.ruff]
@@ -45,7 +51,16 @@ per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "
 [tool.mypy]
 strict = true
 explicit_package_bases = true # Required for src layout
-mypy_path = ["src/mail_client_api/src", "src/gmail_client_impl/src", "src/mail_client_service/src", "src/mail_client_adapter/src", "src/mail_client_service_client"]
+mypy_path = [
+    "src/mail_client_api/src",
+    "src/gmail_client_impl/src",
+    "src/mail_client_service/src",
+    "src/mail_client_adapter/src",
+    "src/mail_client_service_client",
+    "src/ai_api/src",
+    "src/openai_impl/src",
+    "src/ai_service/src",
+]
 ignore_missing_imports = false
 warn_unused_ignores = false
 
@@ -56,6 +71,8 @@ module = [
     "googleapiclient.*",
     "gmail_client_impl.*",
     "mail_client_api.*",
+    "ai_api.*",
+    "openai_impl.*",
 ]
 ignore_missing_imports = true
 
@@ -102,3 +119,6 @@ gmail_client_impl = { workspace = true }
 mail_client_service = { workspace = true }
 mail_client_adapter = { workspace = true }
 mail_client_service_client = { workspace = true }
+ai_api = { workspace = true }
+openai_impl = { workspace = true }
+ai_service = { workspace = true }

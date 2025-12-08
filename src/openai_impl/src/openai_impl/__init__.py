@@ -1,14 +1,10 @@
 """Public exports for the OpenAI implementation package."""
 
-from openai_impl.openai_impl import (
-    OpenAIClient,
-    get_ai_impl,
-    register,
-)
+from openai_impl.openai_impl import OpenAIClient, get_client_impl, register
 
 __all__ = [
     "OpenAIClient",
-    "get_ai_impl",
+    "get_client_impl",
     "register",
 ]
 

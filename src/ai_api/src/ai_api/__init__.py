@@ -25,3 +25,11 @@ class AIInterface(ABC):
         :return: A string (conversation) or a Dict (structured action data).
         """
         raise NotImplementedError
+
+
+def get_client(user_id: str) -> AIInterface:
+    """Return an instance of an AI client for the specified user."""
+    raise NotImplementedError
+
+
+__all__ = ["AIInterface", "get_client"]
