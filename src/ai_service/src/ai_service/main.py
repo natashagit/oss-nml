@@ -4,10 +4,10 @@ import os
 from typing import Any
 
 from dotenv import load_dotenv
-import openai_impl  # noqa: F401 - registers default impl
-from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from fastapi import FastAPI, HTTPException
 
+import openai_impl  # noqa: F401 - registers default impl
+from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from ai_service.models import GenerateRequest, GenerateResponse, HealthCheckResponse
 
 app = FastAPI(
@@ -20,13 +20,13 @@ app = FastAPI(
 load_dotenv()
 
 
-@app.get("/health", response_model=HealthCheckResponse)
+@app.get("/health")
 def health() -> HealthCheckResponse:
     """Health check."""
     return HealthCheckResponse(status="healthy", version=app.version or "0.0.0")
 
 
-@app.post("/generate", response_model=GenerateResponse)
+@app.post("/generate")
 def generate(request: GenerateRequest) -> GenerateResponse:
     """Generate a response using the registered AI interface."""
     try:
