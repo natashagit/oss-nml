@@ -13,11 +13,12 @@ import ai_api
 def test_adapter_to_running_service() -> None:
     """Call the adapter against a real running service instance."""
     base_url = os.getenv("AI_SERVICE_URL", "http://127.0.0.1:8000")
+    http_ok = 200
 
     # Check if service is running before attempting the test
     try:
         response = requests.get(f"{base_url}/health", timeout=2)
-        if response.status_code != 200:
+        if response.status_code != http_ok:
             pytest.skip(f"AI service not available at {base_url}")
     except (requests.ConnectionError, requests.Timeout):
         pytest.skip(f"AI service not running at {base_url}")

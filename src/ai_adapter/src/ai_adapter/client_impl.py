@@ -45,6 +45,10 @@ class ServiceClient(AIInterface):
         result = response.result
         if isinstance(result, str):
             return result
+        if hasattr(result, "to_dict"):
+            return result.to_dict()
+        if hasattr(result, "additional_properties"):
+            return result.additional_properties
         return cast("dict[str, Any]", result)
 
 
