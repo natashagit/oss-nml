@@ -1,108 +1,28 @@
 # OpenAI Implementation
 
+The `openai_impl` package provides a concrete implementation of the `ai_api.AIInterface` using OpenAI's API.
+
 ## Overview
-`openai_impl` provides a concrete implementation of `ai_api.AIInterface` backed by the OpenAI API. It handles API authentication and provides methods to generate both conversational and structured responses from OpenAI's language models.
 
-## Purpose
+This package serves as the production-ready OpenAI integration:
 
-This package serves as the production-ready OpenAI integration for the AI assistant system:
+- **OpenAI API Integration** - Uses the official OpenAI Python client
+- **API Key Authentication** - Secure authentication via environment variables
+- **Structured Output** - Supports JSON Schema for structured responses
+- **Auto-Registration** - Automatically registers itself on import
 
-- **OpenAI API Integration**: Connects to OpenAI using the official Python client
-- **API Key Authentication**: Handles secure authentication via API keys
-- **ABC Implementation**: Provides concrete implementation of AIInterface
-- **Structured Output Support**: Supports both conversational and structured responses using JSON Schema
-- **Dependency Injection**: Automatically registers itself as the AIInterface implementation
-- **Intent Detection**: Perfect for analyzing user input and extracting structured data
+## OpenAIClient
 
-## Installation
+::: openai_impl.OpenAIClient
+    options:
+      show_source: false
+      members:
+        - __init__
+        - generate_response
 
-This package is part of the `uv` workspace:
+## Quick Start
 
-```bash
-uv sync --all-packages
-```
-
-## Architecture
-
-```
-Consumer Code
-    ↓
-ai_api.get_client()
-    ↓
-openai_impl.OpenAIClient
-    ↓
-OpenAI API (gpt-4o-mini)
-```
-
-### Authentication
-- API key authentication via environment variable `OPENAI_API_KEY`
-- Credentials loaded automatically from environment
-- Fails fast with clear error message if API key is missing
-
-### Dependency Injection
-```python
-import openai_impl  # Auto-registers the implementation
-
-from ai_api import get_client
-client = get_client()  # Returns OpenAIClient instance
-```
-
-## API Reference
-
-### OpenAIClient
-
-Implements the `ai_api.AIInterface` abstract base class.
-
-#### Constructor
-
-```python
-OpenAIClient(api_key: str | None = None, model: str | None = None)
-```
-
-**Parameters:**
-- `api_key`: Optional API key. If not provided, reads from `OPENAI_API_KEY` env var
-- `model`: Optional model name. Defaults to `gpt-4o-mini`
-
-**Raises:**
-- `RuntimeError`: If no API key is found or authentication fails
-
-#### Methods
-
-```python
-def generate_response(
-    user_input: str,
-    system_prompt: str,
-    response_schema: dict[str, Any] | None = None,
-) -> str | dict[str, Any]:
-    """Generate a response from OpenAI's API.
-    
-    Args:
-        user_input: The text provided by the user
-        system_prompt: Instructional system prompt
-        response_schema: Optional JSON schema for structured output
-        
-    Returns:
-        str: Conversational response (when response_schema is None)
-        dict: Structured data matching schema (when response_schema is provided)
-        
-    Raises:
-        RuntimeError: If the API call fails
-    """
-```
-
-### Factory Functions
-
-```python
-def get_client_impl(api_key: str | None = None) -> AIInterface:
-    """Return a configured OpenAIClient instance."""
-
-def register(api_key: str | None = None) -> None:
-    """Register the OpenAI client implementation with the AI API."""
-```
-
-## Usage Examples
-
-### Basic Conversational Usage
+### Basic Usage
 
 ```python
 import openai_impl
@@ -134,9 +54,9 @@ response = client.generate_response(
 print(response)
 ```
 
-### Structured Output for Intent Detection
+## Structured Output Examples
 
-The OpenAI implementation supports structured outputs using JSON Schema, perfect for analyzing user input and extracting structured data:
+### Intent Detection
 
 ```python
 import openai_impl
@@ -232,7 +152,7 @@ print(response)
 # }
 ```
 
-### Ticket Creation Example
+### Ticket Creation
 
 ```python
 from ai_api import get_client
@@ -262,12 +182,12 @@ print(result)
 # Output: {"intent": "create_ticket", "title": "Fix login redirect"}
 ```
 
-## Authentication Setup
+## Configuration
 
 ### Environment Variables
 
 ```bash
-export OPENAI_API_KEY="your_api_key_here"
+export OPENAI_API_KEY="your_openai_api_key_here"
 ```
 
 ### .env File
@@ -275,7 +195,7 @@ export OPENAI_API_KEY="your_api_key_here"
 Create a `.env` file in the project root:
 
 ```env
-OPENAI_API_KEY=your_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ### Programmatic Configuration
@@ -290,8 +210,6 @@ client = openai_impl.OpenAIClient(api_key="your_api_key_here")
 openai_impl.register(api_key="your_api_key_here")
 ```
 
-## Configuration
-
 ### Model Selection
 
 ```python
@@ -304,7 +222,7 @@ client = openai_impl.OpenAIClient()
 client = openai_impl.OpenAIClient(model="gpt-4")
 ```
 
-### Error Handling
+## Error Handling
 
 ```python
 import openai_impl
@@ -315,19 +233,6 @@ try:
     response = client.generate_response("Hello", "Be helpful")
 except RuntimeError as e:
     print(f"Error: {e}")
-```
-
-## Testing
-
-```bash
-# Run unit tests
-uv run pytest src/openai_impl/tests/ -v
-
-# Run with coverage
-uv run pytest src/openai_impl/tests/ --cov=src/openai_impl --cov-report=term-missing
-
-# Run specific test
-uv run pytest src/openai_impl/tests/test_openai_impl.py::test_generate_response -v
 ```
 
 ## Response Schema Format
@@ -350,34 +255,35 @@ The `response_schema` parameter should follow this structure:
 }
 ```
 
-## Integration with Other Components
+## Testing
 
-- **ai_api**: Implements the `AIInterface` contract
-- **ai_service**: Uses this implementation to process requests
-- **ai_adapter**: Alternative implementation that calls the service remotely
-- **main.py**: Demo script showing usage examples
+```bash
+# Run unit tests
+uv run pytest src/openai_impl/tests/ -v
 
-## Design Patterns
+# Run with coverage
+uv run pytest src/openai_impl/tests/ --cov=src/openai_impl --cov-report=term-missing
+```
 
-1. **Abstract Base Class (ABC)**: Implements the `AIInterface` contract
-2. **Dependency Injection**: Registers itself via `register()` function
-3. **Factory Pattern**: Provides `get_client_impl()` factory function
-4. **Fail Fast**: Clear error messages for missing configuration
+## Integration
 
-## Performance Considerations
+- **ai_api** - Implements the `AIInterface` contract
+- **ai_service** - Uses this implementation to process requests
+- **ai_adapter** - Alternative implementation that calls the service remotely
 
-- **Model Selection**: `gpt-4o-mini` is fast and cost-effective for most use cases
-- **Structured Output**: Uses OpenAI's native structured output mode for reliability
-- **Strict Mode**: Enables strict JSON schema validation for guaranteed conformance
+## Performance
+
+- **Model**: Uses `gpt-4o-mini` by default (fast and cost-effective)
+- **Structured Output**: Uses OpenAI's native structured output mode
+- **Strict Mode**: Enables strict JSON schema validation
 - **Error Handling**: Comprehensive error handling with clear messages
 
-## Security Best Practices
+## Security
 
 - Never commit API keys to version control
 - Use environment variables or secrets management
 - Rotate API keys regularly
 - Monitor API usage and set spending limits
-- Use `.gitignore` to exclude `.env` files
 
 ## Troubleshooting
 
@@ -397,9 +303,8 @@ echo "OPENAI_API_KEY=your_key_here" > .env
 - Check your OpenAI account status
 - Ensure you have sufficient credits
 
-### Import Errors
+## See Also
 
-```bash
-# Ensure all dependencies are installed
-uv sync --all-packages
-```
+- [AI API Reference](ai_api.md) - Abstract interface
+- [AI Service](ai_service.md) - REST service wrapper
+- [AI Adapter](ai_adapter.md) - Remote service adapter

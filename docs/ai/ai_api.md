@@ -1,71 +1,35 @@
 # AI API
 
+The `ai_api` package defines the abstract interface (contract) for all AI implementations in the system.
+
 ## Overview
-`ai_api` defines the abstract interface (contract) for AI services in this application. It provides the `AIInterface` ABC that all AI implementations must follow, enabling dependency injection and implementation swapping.
 
-## Purpose
+This package provides the foundation for the AI service architecture through:
 
-This package serves as the foundation for the AI service architecture:
+- **AIInterface (ABC)** - Abstract base class defining the contract
+- **get_client()** - Factory function returning the registered implementation
+- **Dependency Injection** - Implementations register themselves at runtime
 
-- **Abstract Base Class (ABC)**: Defines the contract that all AI implementations must fulfill
-- **Dependency Injection**: Provides a `get_client()` factory function that returns the registered implementation
-- **Implementation Agnostic**: Consumer code depends only on the interface, not specific implementations
-- **Flexible Architecture**: Allows switching between local (OpenAI) and remote (AI Service) implementations
+## AIInterface
 
-## Architecture
+::: ai_api.AIInterface
+    options:
+      show_source: false
+      members:
+        - generate_response
 
-The AI API follows the **Interface-Implementation Separation** pattern:
-
-```
-ai_api (Interface/Contract)
-    ↑
-    ├── openai_impl (Local Implementation)
-    └── ai_adapter (Remote Service Implementation)
-```
-
-### Key Components
-
-1. **AIInterface (ABC)**: Abstract base class defining the contract
-2. **get_client()**: Factory function that returns the registered implementation
-
-## API Reference
-
-### AIInterface
-
-Abstract base class that defines the contract for AI services.
-
-#### Methods
-
-```python
-@abstractmethod
-def generate_response(
-    user_input: str,
-    system_prompt: str,
-    response_schema: dict[str, Any] | None = None,
-) -> str | dict[str, Any]:
-    """Generate a response from the AI.
-    
-    Args:
-        user_input: The text provided by the chat user
-        system_prompt: The instruction set (e.g., "You are a helpful assistant...")
-        response_schema: Optional JSON schema dict for structured output
-        
-    Returns:
-        str: Conversational response (when response_schema is None)
-        dict: Structured data matching the schema (when response_schema is provided)
-    """
-```
-
-### Factory Function
+## Factory Function
 
 ```python
 def get_client() -> AIInterface:
     """Return an instance of the registered AI client implementation."""
 ```
 
-## Usage Examples
+The `get_client()` function is designed to be "patched" by implementations during their import/registration.
 
-### Basic Usage (with Implementation)
+## Usage
+
+### Basic Usage
 
 ```python
 import openai_impl  # Registers the OpenAI implementation
@@ -74,7 +38,7 @@ from ai_api import get_client
 # Get the registered client
 client = get_client()
 
-# Conversational response
+# Generate a response
 response = client.generate_response(
     user_input="What is the capital of France?",
     system_prompt="You are a helpful geography assistant."
@@ -115,7 +79,7 @@ print(result)  # {"intent": "create_ticket", "title": "Fix login redirect"}
 
 ### Switching Implementations
 
-The beauty of this architecture is that you can switch implementations without changing consumer code:
+The power of this architecture is seamless implementation switching:
 
 ```python
 # Option 1: Use local OpenAI implementation
@@ -137,7 +101,7 @@ response = client.generate_response("Hello", "You are helpful.")
 
 ## Dependency Injection Pattern
 
-The `get_client()` function is designed to be "patched" by implementations:
+Implementations register themselves by patching the `get_client()` function:
 
 ```python
 import ai_api
@@ -149,7 +113,7 @@ try:
 except NotImplementedError:
     print("No implementation registered yet")
 
-# Implementations register themselves by patching get_client()
+# Implementations register by patching get_client()
 def register_my_impl():
     def _get_client() -> AIInterface:
         return MyCustomAIClient()
@@ -181,6 +145,43 @@ When using structured output, the `response_schema` should follow this format:
 }
 ```
 
+## Method Reference
+
+### generate_response
+
+```python
+def generate_response(
+    user_input: str,
+    system_prompt: str,
+    response_schema: dict[str, Any] | None = None,
+) -> str | dict[str, Any]:
+    """Generate a response from the AI.
+    
+    Args:
+        user_input: The text provided by the chat user
+        system_prompt: The instruction set (e.g., "You are a helpful assistant...")
+        response_schema: Optional JSON schema dict for structured output
+        
+    Returns:
+        str: Conversational response (when response_schema is None)
+        dict: Structured data matching schema (when response_schema is provided)
+    """
+```
+
+## Design Principles
+
+1. **Single Responsibility** - Defines only the contract, no implementation
+2. **Open/Closed** - Open for extension (new implementations), closed for modification
+3. **Dependency Inversion** - High-level code depends on abstractions
+4. **Interface Segregation** - Minimal, focused interface
+
+## Integration
+
+- **openai_impl** - Provides concrete implementation using OpenAI API
+- **ai_service** - FastAPI service exposing the interface via REST
+- **ai_adapter** - Adapter wrapping service client to match this interface
+- **ai_service_client** - Auto-generated client for calling the service
+
 ## Testing
 
 ```bash
@@ -191,16 +192,8 @@ uv run pytest src/ai_api/tests/ -v
 uv run pytest src/ai_api/tests/ --cov=src/ai_api --cov-report=term-missing
 ```
 
-## Integration with Other Components
+## See Also
 
-- **openai_impl**: Provides concrete implementation using OpenAI API
-- **ai_service**: FastAPI service that exposes the interface via REST endpoints
-- **ai_adapter**: Adapter that wraps the service client to match this interface
-- **ai_service_client**: Auto-generated client for calling the AI service
-
-## Design Principles
-
-1. **Single Responsibility**: Defines only the contract, no implementation details
-2. **Open/Closed**: Open for extension (new implementations), closed for modification
-3. **Dependency Inversion**: High-level code depends on abstractions, not concrete implementations
-4. **Interface Segregation**: Minimal, focused interface with only essential methods
+- [OpenAI Implementation](openai_impl.md) - Concrete implementation
+- [AI Service](ai_service.md) - REST service wrapper
+- [AI Adapter](ai_adapter.md) - Remote service adapter
