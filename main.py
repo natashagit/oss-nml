@@ -1,69 +1,51 @@
-"""Main module for demonstrating the mail client."""
+"""Entry point for demonstrating the AI service stack."""
 
-# ta-assignment/main.py
-
-import contextlib
 import logging
+import os
 
-import mail_client_adapter
-import mail_client_api
-
-# Register the service adapter
-mail_client_adapter.register()
+import ai_adapter
+import ai_api
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Initialize the client and demonstrate all mail client methods."""
-    client = mail_client_api.get_client()
+    """Run a small AI demo against the running AI service."""
+    base_url = os.getenv("AI_SERVICE_URL", "http://127.0.0.1:8000")
 
-    # Test 1: Get messages (existing functionality)
-    messages = list(client.get_messages(max_results=3))
+    # Wire the AI adapter to point at the service
+    ai_adapter.register(base_url=base_url)
+    client = ai_api.get_client()
 
-    if not messages:
-        return
+    logger.info("Calling AI service at %s", base_url)
 
-    for _i, _msg in enumerate(messages, 1):
-        pass
+    # Conversational call
+    text_response = client.generate_response("Say hello in 3 words.", "You are concise.")
+    print("Conversational response:", text_response)  # noqa: T201
 
-    # Test 2: Get a specific message by ID
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            client.get_message(test_message_id)
+    # Structured call using a simple schema
+    schema = {
+        "name": "ticket_command",
+        "description": "Extract intent and title from a ticket request",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "intent": {"type": "string"},
+                "title": {"type": "string"},
+            },
+            "required": ["intent", "title"],
+            "additionalProperties": False,
+        },
+    }
+    structured = client.generate_response(
+        "Create a ticket to fix login redirect.",
+        "Extract intent and title fields.",
+        response_schema=schema,
+    )
+    print("Structured response:", structured)  # noqa: T201
 
-    # Test 3: Mark a message as read
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            success = client.mark_as_read(test_message_id)
-            if success:
-                pass
-            else:
-                pass
-
-    # Test 4: Delete a message (WARNING: This is destructive!)
-    # Only test if we have more than one message to avoid deleting all messages
-    if len(messages) > 1:
-        # Ask for confirmation before deleting
-        delete_message_id = messages[-1].id  # Delete the last message
-        try:
-            confirmation = input("Type 'DELETE' to confirm deletion: ")
-            if confirmation == "DELETE":
-                success = client.delete_message(delete_message_id)
-                if success:
-                    logger.info("Message with ID %s deleted.", delete_message_id)
-                else:
-                    logger.info("Failed to delete message with ID %s.", delete_message_id)
-        except EOFError:
-            # This means that CircleCI or another non-interactive environment is not going to actually delete anything
-            pass
-    else:
-        pass
-
-    print("Demo complete.")  # noqa: T201
+    print("AI demo complete.")  # noqa: T201
 
 
 if __name__ == "__main__":

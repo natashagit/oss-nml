@@ -1,13 +1,16 @@
-# Python Application Template: A Component-Based Mail Client
+# Python Application Template: Component-Based Architecture
 
 [![CircleCI](https://circleci.com/gh/ivanearisty/oss-taapp.svg?style=shield)](https://circleci.com/gh/ivanearisty/oss-taapp)
 [![Coverage](https://img.shields.io/badge/coverage-85%2B%25-brightgreen)](https://circleci.com/gh/ivanearisty/oss-taapp)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-This repository serves as a professional-grade template for a modern Python project. It demonstrates a robust, component-based architecture by building the core components for an AI-powered email assistant that interacts with the Gmail API.
+This repository serves as a professional-grade template for modern Python projects. It demonstrates a robust, component-based architecture by building two complete systems:
 
-The project emphasizes a strict separation of concerns, dependency injection, and a comprehensive, automated toolchain to enforce code quality and best practices.
+1. **AI Service Stack**: OpenAI-powered AI assistant with conversational and structured output capabilities
+2. **Mail Client Stack**: Gmail API integration for email management
+
+The project emphasizes strict separation of concerns, dependency injection, and a comprehensive automated toolchain to enforce code quality and best practices.
 
 ## Architectural Philosophy
 
@@ -19,33 +22,48 @@ This project is built on the principle of "programming integrated over time." Th
 
 ## Core Components
 
-The project is a `uv` workspace containing four primary packages:
+The project is a `uv` workspace containing two complete component stacks:
 
-1.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
-2.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
-3. **`mail_client_service`**: A FastAPI service that wraps the `mail_client_api` interface and exposes REST endpoints (`/messages`, `/messages/{id}`, `/messages/{id}/mark-as-read`, `/messages/{id}` [DELETE]).
-4. **`mail_client_adapter`**: Wraps an auto-generated client from the OpenAPI spec (via `openapi-python-client`) and implements the `mail_client_api.Client` interface. This makes remote service calls feel identical to local library usage.
-5. **`mail_client_service_client`**: Auto-generated Python client package (produced with `openapi-python-client`) that provides strongly-typed methods for interacting with the service endpoints.
+### AI Service Stack
+
+1. **`ai_api`**: Defines the abstract `AIInterface` base class (ABC). This is the contract for AI operations (e.g., `generate_response`).
+2. **`openai_impl`**: Provides the `OpenAIClient` class, a concrete implementation using the OpenAI API. Supports both conversational and structured output.
+3. **`ai_service`**: A FastAPI service that wraps the `ai_api` interface and exposes REST endpoints (`/generate`, `/health`).
+4. **`ai_adapter`**: Wraps an auto-generated client from the OpenAPI spec and implements the `ai_api.AIInterface`. Makes remote service calls feel identical to local library usage.
+5. **`ai_service_client`**: Auto-generated Python client package (via `openapi-python-client`) that provides strongly-typed methods for interacting with the AI service.
+
+### Mail Client Stack
+
+1. **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for mail client operations (e.g., `get_messages`).
+2. **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation using the Gmail API.
+3. **`mail_client_service`**: A FastAPI service that wraps the `mail_client_api` interface and exposes REST endpoints (`/messages`, `/messages/{id}`, etc.).
+4. **`mail_client_adapter`**: Wraps an auto-generated client and implements the `mail_client_api.Client` interface.
+5. **`mail_client_service_client`**: Auto-generated Python client package for interacting with the mail service.
 
 ## Project Structure
 
 ```
-ta-assignment/
+oss-nml/
 ├── src/                            # Source packages (uv workspace members)
-│   ├── mail_client_api/            # Abstract mail client base class (ABC)  
-│   └── gmail_client_impl/          # Gmail-specific client implementation
-|   |__ mail_client_service/        # FastAPI web service exposing Client via REST endpoints
-|   |__ mail_client_adapter/        # Adapter wrapping auto-generated client to match Client interface
-|   |__ mail_client_service_client/ # Auto-generated client code from OpenAPI (via openapi-python-client)
+│   ├── ai_api/                     # Abstract AI interface (ABC)
+│   ├── openai_impl/                # OpenAI-specific implementation
+│   ├── ai_service/                 # FastAPI web service for AI
+│   ├── ai_adapter/                 # Adapter wrapping service client
+│   ├── ai_service_client/          # Auto-generated AI service client
+│   ├── mail_client_api/            # Abstract mail client base class (ABC)
+│   ├── gmail_client_impl/          # Gmail-specific client implementation
+│   ├── mail_client_service/        # FastAPI web service for mail
+│   ├── mail_client_adapter/        # Adapter wrapping mail service client
+│   └── mail_client_service_client/ # Auto-generated mail service client
 ├── tests/                          # Integration and E2E tests
 │   ├── integration/                # Component integration tests
 │   └── e2e/                        # End-to-end application tests
 ├── docs/                           # Documentation source files
 ├── .circleci/                      # CircleCI configuration
-├── main.py                         # Main application entry point
+├── main.py                         # AI service demo entry point
 ├── pyproject.toml                  # Project configuration (dependencies, tools)
 ├── uv.lock                         # Locked dependency versions
-└── credentials.json                # Google OAuth credentials (local only)
+└── .env.example                    # Example environment variables
 ```
 
 ## Project Setup
@@ -71,7 +89,19 @@ ta-assignment/
     cd ta-assignment
     ```
 
-3.  **Set Up Google Credentials:**
+3.  **Set Up API Credentials:**
+
+    **For AI Service (Required):**
+    ```bash
+    export OPENAI_API_KEY="your_openai_api_key_here"
+    ```
+    
+    Or create a `.env` file:
+    ```env
+    OPENAI_API_KEY=your_openai_api_key_here
+    ```
+
+    **For Gmail Service (Optional):**
     -   Follow the [Google Cloud instructions](https://developers.google.com/gmail/api/quickstart/python#authorize_credentials_for_a_desktop_application) to enable the Gmail API and download your OAuth 2.0 credentials.
     -   Rename the downloaded file to `credentials.json` and place it in the root of this project.
     -   **Alternative**: For CI/CD environments, you can use environment variables instead:
@@ -96,31 +126,235 @@ ta-assignment/
     .venv\Scripts\Activate.ps1
     ```
 
-6.  **Perform Initial Authentication:**
-    Run the main application once to perform the interactive OAuth flow. This will open a browser window for you to grant permission.
+6.  **Run the AI Demo:**
     ```bash
+    # Terminal 1: Start the AI service
+    uv run uvicorn ai_service.main:app --reload
+    
+    # Terminal 2: Run the demo
     uv run python main.py
     ```
-    After you approve, a `token.json` file will be created. This file is also ignored by `.gitignore` and will be used for authentication in subsequent runs.
+    
+    **For Gmail (Optional):**
+    Run the mail client once to perform the interactive OAuth flow. This will open a browser window for you to grant permission. After you approve, a `token.json` file will be created.
+
+## How to Run
+
+### Running the AI Service Demo
+
+The main demo (`main.py`) demonstrates the AI service with both conversational and structured output:
+
+```bash
+# 1. Set your OpenAI API key
+export OPENAI_API_KEY="your_openai_api_key_here"
+
+# 2. Start the AI service (Terminal 1)
+uv run uvicorn ai_service.main:app --reload
+
+# 3. Run the demo (Terminal 2)
+uv run python main.py
+```
+
+**Expected Output:**
+
+```
+Conversational response: Hello there friend!
+Structured response: {'intent': 'create_ticket', 'title': 'Fix login redirect'}
+AI demo complete.
+```
+
+### Running with Local Implementation (No Service)
+
+You can also run the AI client directly without the service:
+
+```bash
+export OPENAI_API_KEY="your_openai_api_key_here"
+
+python -c "
+import openai_impl
+from ai_api import get_client
+
+client = get_client()
+response = client.generate_response(
+    'What is 2+2?',
+    'You are a math tutor.'
+)
+print(response)
+"
+```
+
+### Sample Input/Output Examples
+
+#### Example 1: Conversational Response (No Schema)
+
+```python
+import openai_impl
+from ai_api import get_client
+
+client = get_client()
+
+response = client.generate_response(
+    user_input="Explain Python decorators in one sentence.",
+    system_prompt="You are concise and clear."
+)
+
+print(response)
+# Output: "Python decorators are functions that modify the behavior of other functions or classes."
+```
+
+#### Example 2: Structured Output (With Schema)
+
+```python
+import openai_impl
+from ai_api import get_client
+
+client = get_client()
+
+# Define a schema for email action extraction
+schema = {
+    "name": "email_action",
+    "description": "Extract email action intent and parameters",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "action": {
+                "type": "string",
+                "enum": ["delete", "mark_as_read", "get_message", "list_messages"]
+            },
+            "message_id": {"type": "string"}
+        },
+        "required": ["action"],
+        "additionalProperties": False
+    }
+}
+
+response = client.generate_response(
+    user_input="Delete the email with ID 12345",
+    system_prompt="Extract the email action and parameters.",
+    response_schema=schema
+)
+
+print(response)
+# Output: {"action": "delete", "message_id": "12345"}
+```
+
+#### Example 3: Intent Detection
+
+```python
+import openai_impl
+from ai_api import get_client
+
+client = get_client()
+
+schema = {
+    "name": "intent_detection",
+    "description": "Detect user intent",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "intent": {
+                "type": "string",
+                "enum": ["email_management", "weather_query", "general_conversation"]
+            },
+            "confidence": {"type": "number"}
+        },
+        "required": ["intent", "confidence"],
+        "additionalProperties": False
+    }
+}
+
+response = client.generate_response(
+    user_input="Show me my last 5 unread emails",
+    system_prompt="Analyze the user's intent.",
+    response_schema=schema
+)
+
+print(response)
+# Output: {"intent": "email_management", "confidence": 0.95}
+```
+
+#### Example 4: Using the Remote Service (via Adapter)
+
+```bash
+# Terminal 1: Start the service
+export OPENAI_API_KEY="your_key"
+uv run uvicorn ai_service.main:app --reload
+
+# Terminal 2: Use the adapter
+python -c "
+import ai_adapter
+from ai_api import get_client
+
+# Register the adapter to use the remote service
+ai_adapter.register(base_url='http://127.0.0.1:8000')
+
+client = get_client()
+response = client.generate_response(
+    'Say hello in 3 words',
+    'You are concise.'
+)
+print(response)
+"
+# Output: "Hello there friend!"
+```
 
 ## How It Works
 
-### Service Layer (`mail_client_service`)
-FastAPI app exposes REST endpoints for the `Client` interface.  
+### AI Service Architecture
 
-### Generated Client (`mail_client_service_client`)
-Auto-generated with `openapi-python-client`, providing strongly typed request/response methods.  
+```
+Consumer Code
+    ↓
+ai_api.get_client()
+    ↓
+    ├── openai_impl.OpenAIClient (Local)
+    │       ↓
+    │   OpenAI API
+    │
+    └── ai_adapter.ServiceClient (Remote)
+            ↓
+        ai_service_client (HTTP)
+            ↓
+        ai_service (FastAPI)
+            ↓
+        openai_impl.OpenAIClient
+            ↓
+        OpenAI API
+```
 
-### Adapter Layer (`mail_client_adapter`)
-Wraps the generated client and conforms to `mail_client_api.Client`.  
-Consumer code calls `mail_client_api.get_client()` and stays unchanged whether it uses the local Gmail implementation or the remote service.  
+**Key Features:**
+- **Conversational Mode**: Returns natural language responses
+- **Structured Mode**: Returns JSON matching a provided schema
+- **Intent Detection**: Perfect for analyzing user input and extracting structured data
+- **Seamless Switching**: Same code works with local or remote implementation
 
-### Demo (`main.py`)
-Demonstrates all supported operations:  
-- Fetching messages  
-- Retrieving a single message  
-- Marking as read  
-- Deleting
+### Mail Client Architecture
+
+```
+Consumer Code
+    ↓
+mail_client_api.get_client()
+    ↓
+    ├── gmail_client_impl.GmailClient (Local)
+    │       ↓
+    │   Gmail API
+    │
+    └── mail_client_adapter.ServiceClient (Remote)
+            ↓
+        mail_client_service_client (HTTP)
+            ↓
+        mail_client_service (FastAPI)
+            ↓
+        gmail_client_impl.GmailClient
+            ↓
+        Gmail API
+```
+
+**Supported Operations:**
+- Fetching messages
+- Retrieving a single message
+- Marking as read
+- Deleting messages
 
 ## Development Workflow
 
@@ -128,15 +362,24 @@ All commands should be run from the project root with the virtual environment ac
 
 ### Running the Application
 
-Start the FastAPI service (in one terminal):
+**AI Service:**
 ```bash
-uv run uvicorn mail_client_service.main:app --reload
-```
+# Terminal 1: Start the AI service
+uv run uvicorn ai_service.main:app --reload
 
-To run the main demonstration script:
-```bash
+# Terminal 2: Run the demo
 uv run python main.py
 ```
+
+**Mail Service (Optional):**
+```bash
+# Start the mail service
+uv run uvicorn mail_client_service.main:app --reload --port 8001
+```
+
+**Access API Documentation:**
+- AI Service: http://127.0.0.1:8000/docs
+- Mail Service: http://127.0.0.1:8001/docs
 
 ### Running the Toolchain
 
