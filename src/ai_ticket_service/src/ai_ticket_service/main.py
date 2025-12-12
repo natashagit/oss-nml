@@ -128,7 +128,8 @@ def _handle_intent(
             result = _serialize_ticket(found) if found else None
 
     if intent == "search_tickets":
-        query = ai_result.get("query")
+        raw_query = ai_result.get("query")
+        query = raw_query if isinstance(raw_query, str) and raw_query.strip() else None
         status = _parse_status(ai_result.get("status"))
         matches = tickets_client.search_tickets(query=query, status=status)
         result = [_serialize_ticket(ticket) for ticket in matches]

@@ -12,7 +12,9 @@ members = [
     "ai-api",
     "ai-service",
     "ai-service-client",
+    "ai-ticket-adapter",
     "ai-ticket-service",
+    "ai-ticket-service-client",
     "gmail-client-impl",
     "mail-client-adapter",
     "mail-client-api",
@@ -83,6 +85,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "ai-ticket-adapter"
+version = "0.1.0"
+source = { editable = "src/ai_ticket_adapter" }
+dependencies = [
+    { name = "ai-ticket-service-client" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "ai-ticket-service-client", editable = "src/ai_ticket_service_client" }]
+
+[[package]]
 name = "ai-ticket-service"
 version = "0.1.0"
 source = { editable = "src/ai_ticket_service" }
@@ -105,6 +118,23 @@ requires-dist = [
     { name = "tickets-api", editable = "src/tickets_api" },
     { name = "tickets-client-impl", editable = "src/tickets_client_impl" },
     { name = "uvicorn", specifier = ">=0.32.0" },
+]
+
+[[package]]
+name = "ai-ticket-service-client"
+version = "0.1.0"
+source = { editable = "src/ai_ticket_service_client" }
+dependencies = [
+    { name = "attrs" },
+    { name = "httpx" },
+    { name = "python-dateutil" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "attrs", specifier = ">=22.2.0" },
+    { name = "httpx", specifier = ">=0.23.0,<0.29.0" },
+    { name = "python-dateutil", specifier = ">=2.8.0" },
 ]
 
 [[package]]
@@ -1685,6 +1715,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "ai-api" },
+    { name = "ai-ticket-adapter" },
     { name = "gtask-client-impl" },
     { name = "openai-impl" },
     { name = "task-client-api" },
@@ -1715,6 +1746,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ai-api", editable = "src/ai_api" },
+    { name = "ai-ticket-adapter", editable = "src/ai_ticket_adapter" },
     { name = "google-api-python-client-stubs", marker = "extra == 'dev'", specifier = ">=1.30.0" },
     { name = "gtask-client-impl", git = "https://github.com/gsiri-code/oss-taapp.git?subdirectory=src%2Fgtask_client_impl&branch=feat%2Faligning-ticket-api" },
     { name = "mkdocs", marker = "extra == 'dev'", specifier = ">=1.6.1" },
