@@ -103,7 +103,7 @@ def _parse_status(status_str: str | None) -> TicketStatus | None:
     if not status_str:
         return None
     try:
-        return TicketStatus(status_str.upper())
+        return TicketStatus(status_str.lower())
     except ValueError:
         return None
 

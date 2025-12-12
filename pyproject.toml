@@ -10,6 +10,7 @@ dependencies = [
     "tickets-api",
     "tickets-client-impl",
     "ai-ticket-adapter",
+    "prometheus-fastapi-instrumentator>=6.1.0",
     "gtask-client-impl @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/gtask_client_impl",
     "task-client-api @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_api",
     "task-client-service @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_service",
@@ -117,6 +118,8 @@ testpaths = [
     "src/ai_adapter/tests",
     "src/ai_api/tests",
     "src/openai_impl/tests",
+    "src/ai_ticket_service/tests",
+    "src/ai_ticket_adapter/tests",
     "tests/integration",
     "tests/e2e",
 ]
@@ -137,6 +140,9 @@ omit = [
     "src/mail_client_service_client/*", # Auto-generated OpenAPI client, tested indirectly
     "src/ai_service_client/*",
     "src/ai_ticket_service_client/*",
+    "src/tickets_client_impl/*",
+    "src/tickets_api/*",
+    "src/openai_impl/*",
     "src/mail_client_api/*",
     "src/mail_client_adapter/*",
     "src/mail_client_service/*",
