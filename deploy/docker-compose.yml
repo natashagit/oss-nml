@@ -1,4 +1,3 @@
-# deploy/docker-compose.yml
 version: '3.8'
 
 services:
@@ -6,10 +5,12 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+    platform: linux/amd64 # Force Linux build for EC2
     ports:
       - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    restart: always
 
   prometheus:
     image: prom/prometheus:latest

@@ -1,16 +1,25 @@
-# deploy/Dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install dependencies (fastapi, uvicorn, prometheus, etc)
-RUN pip install --no-cache-dir fastapi uvicorn prometheus-fastapi-instrumentator openai httpx
+# FIX 1: Pin OpenAI to 2.9.0 to match your uv.lock
+# FIX 2: Install python-multipart (often needed) and other deps
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    prometheus-fastapi-instrumentator \
+    openai==2.9.0 \
+    httpx \
+    python-dotenv \
+    python-multipart
 
-# Copy the source code from the project root
+# Copy the source code
 COPY src/ ./src/
 
-# CRITICAL: This allows 'from ai_api import...' to work
-ENV PYTHONPATH="${PYTHONPATH}:/app/src"
+# FIX 3: COMPLEX PYTHONPATH
+# Your code uses nested src folders (e.g., src/ai_api/src).
+# We must add EACH component's inner 'src' folder to the path so imports work.
+ENV PYTHONPATH="${PYTHONPATH}:/app/src/ai_service/src:/app/src/ai_api/src:/app/src/openai_impl/src"
 
 # Default Command
 CMD ["uvicorn", "ai_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
