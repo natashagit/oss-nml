@@ -95,7 +95,10 @@ class TicketsClient(TicketInterface):
     IP_PREFIX = "(IP) "
 
     def __init__(
-        self, gtask_client: _GTaskClient | None = None, *, interactive: bool = False,
+        self,
+        gtask_client: _GTaskClient | None = None,
+        *,
+        interactive: bool = False,
     ) -> None:
         """Initialize the TicketsClient.
 
@@ -226,7 +229,9 @@ class TicketsClient(TicketInterface):
             return None
 
     def search_tickets(
-        self, query: str | None = None, status: TicketStatus | None = None,
+        self,
+        query: str | None = None,
+        status: TicketStatus | None = None,
     ) -> list[TicketABC]:
         """Search for tickets based on query and/or status.
 

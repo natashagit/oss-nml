@@ -53,6 +53,7 @@ line-length = 130 # high for top level due to tests
 target-version = "py311"
 extend-exclude = [
   "src/ai_ticket_service_client",
+  "src/ai_ticket_service_client/**",
 ]
 
 [tool.ruff.lint]
@@ -101,6 +102,8 @@ module = [
     "tickets_api.*",
     "tickets_client_impl.*",
     "gtask_client_impl.*",
+    "prometheus_fastapi_instrumentator.*",
+    "requests",
 ]
 ignore_missing_imports = true
 

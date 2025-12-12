@@ -5,10 +5,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-
-
-from prometheus_fastapi_instrumentator import Instrumentator 
-
+from prometheus_fastapi_instrumentator import Instrumentator
 
 import openai_impl  # noqa: F401 - registers default impl
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
