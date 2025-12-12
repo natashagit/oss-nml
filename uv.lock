@@ -12,7 +12,9 @@ members = [
     "ai-api",
     "ai-service",
     "ai-service-client",
+    "ai-ticket-adapter",
     "ai-ticket-service",
+    "ai-ticket-service-client",
     "gmail-client-impl",
     "mail-client-adapter",
     "mail-client-api",
@@ -83,6 +85,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "ai-ticket-adapter"
+version = "0.1.0"
+source = { editable = "src/ai_ticket_adapter" }
+dependencies = [
+    { name = "ai-ticket-service-client" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "ai-ticket-service-client", editable = "src/ai_ticket_service_client" }]
+
+[[package]]
 name = "ai-ticket-service"
 version = "0.1.0"
 source = { editable = "src/ai_ticket_service" }
@@ -105,6 +118,23 @@ requires-dist = [
     { name = "tickets-api", editable = "src/tickets_api" },
     { name = "tickets-client-impl", editable = "src/tickets_client_impl" },
     { name = "uvicorn", specifier = ">=0.32.0" },
+]
+
+[[package]]
+name = "ai-ticket-service-client"
+version = "0.1.0"
+source = { editable = "src/ai_ticket_service_client" }
+dependencies = [
+    { name = "attrs" },
+    { name = "httpx" },
+    { name = "python-dateutil" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "attrs", specifier = ">=22.2.0" },
+    { name = "httpx", specifier = ">=0.23.0,<0.29.0" },
+    { name = "python-dateutil", specifier = ">=2.8.0" },
 ]
 
 [[package]]
