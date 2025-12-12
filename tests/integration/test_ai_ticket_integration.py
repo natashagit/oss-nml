@@ -63,7 +63,7 @@ class _FakeTickets:
         return self.deleted
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 

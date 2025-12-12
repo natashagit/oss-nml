@@ -30,16 +30,16 @@ class _FakeTicketsClient:
             assignee=None,
         )
 
-    def create_ticket(self, title: str, description: str) -> Ticket:
+    def create_ticket(self, title: str, description: str) -> object:
         self._ticket.title = title
         self._ticket.description = description
         return self._ticket
 
-    def search_tickets(self, query: str | None = None, status: TicketStatus | None = None) -> list[Ticket]:
+    def search_tickets(self, query: str | None = None, status: TicketStatus | None = None) -> list[object]:
         del query, status
         return [self._ticket]
 
-    def get_ticket(self, ticket_id: str) -> Ticket | None:
+    def get_ticket(self, ticket_id: str) -> object | None:
         return self._ticket if ticket_id == self._ticket.id else None
 
     def update_ticket(
@@ -47,7 +47,7 @@ class _FakeTicketsClient:
         ticket_id: str,
         status: TicketStatus | None = None,
         title: str | None = None,
-    ) -> Ticket:
+    ) -> object:
         if title:
             self._ticket.title = title
         if status:
@@ -55,10 +55,10 @@ class _FakeTicketsClient:
         return self._ticket
 
     def delete_ticket(self, ticket_id: str) -> bool:
-        return ticket_id == self._ticket.id
+        return bool(ticket_id == self._ticket.id)
 
 
-@pytest.fixture()
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 
