@@ -7,6 +7,11 @@ requires-python = ">=3.11"
 dependencies = [
     "ai-api",
     "openai-impl",
+    "tickets-api",
+    "tickets-client-impl",
+    "gtask-client-impl @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/gtask_client_impl",
+    "task-client-api @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_api",
+    "task-client-service @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_service",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +40,9 @@ members = [
   "src/ai_service",
   "src/ai_adapter",
   "src/ai_service_client",
+  "src/tickets_api",
+  "src/tickets_client_impl",
+  "src/ai_ticket_service",
 ]
 
 [tool.ruff]
@@ -64,6 +72,9 @@ mypy_path = [
     "src/ai_service/src",
     "src/ai_adapter/src",
     "src/ai_service_client",
+    "src/tickets_api/src",
+    "src/tickets_client_impl/src",
+    "src/ai_ticket_service/src",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -79,6 +90,9 @@ module = [
     "openai_impl.*",
     "ai_adapter.*",
     "ai_service_client.*",
+    "tickets_api.*",
+    "tickets_client_impl.*",
+    "gtask_client_impl.*",
 ]
 ignore_missing_imports = true
 
@@ -142,3 +156,7 @@ openai_impl = { workspace = true }
 ai_service = { workspace = true }
 ai_adapter = { workspace = true }
 ai_service_client = { workspace = true }
+tickets_api = { workspace = true }
+tickets_client_impl = { workspace = true }
+gtask-client-impl = { git = "https://github.com/gsiri-code/oss-taapp.git", branch = "feat/aligning-ticket-api", subdirectory = "src/gtask_client_impl" }
+task-client-api = { git = "https://github.com/gsiri-code/oss-taapp.git", branch = "feat/aligning-ticket-api", subdirectory = "src/task_client_api" }
