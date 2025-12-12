@@ -14,6 +14,17 @@ This document provides a quick reference to all components in the project and th
 | **ai_adapter** | Service client adapter | [src/ai_adapter/README.md](src/ai_adapter/README.md) |
 | **ai_service_client** | Auto-generated HTTP client | [src/ai_service_client/README.md](src/ai_service_client/README.md) |
 
+## AI Ticket Service Stack
+
+### Core Components
+
+| Component | Purpose | README |
+|-----------|---------|--------|
+| **ai_ticket_service** | AI-powered ticket orchestration | [src/ai_ticket_service/README.md](src/ai_ticket_service/README.md) |
+| **tickets_api** | Abstract ticket interface (ABC) | [src/tickets_api/README.md](src/tickets_api/README.md) |
+| **tickets_client_impl** | Google Tasks implementation | [src/tickets_client_impl/README.md](src/tickets_client_impl/README.md) |
+| **trello_tickets_adapter** | Trello implementation (via Kanban API) | [src/trello_tickets_adapter/README.md](src/trello_tickets_adapter/README.md) |
+
 ### Quick Start
 
 ```bash
@@ -25,6 +36,21 @@ uv run uvicorn ai_service.main:app --reload
 
 # Run demo
 uv run python main.py
+```
+
+### Quick Start (Ticket Service)
+
+```bash
+# Set credentials
+export OPENAI_API_KEY="your_key"
+export TRELLO_TOKEN="your_trello_token"
+export TRELLO_BOARD_ID="your_board_id"
+
+# Start ticket service
+uv run uvicorn ai_ticket_service.main:app --reload --port 8002
+
+# Run multi-backend demo
+uv run python example_multi_backend.py
 ```
 
 ## Mail Client Stack

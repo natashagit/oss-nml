@@ -1,0 +1,14 @@
+[project]
+name = "trello-tickets-adapter"
+version = "0.1.0"
+description = "Adapter that maps Kanban API to Tickets API for Trello integration"
+requires-python = ">=3.11"
+dependencies = [
+    "tickets-api",
+    "kanban-client-api",
+    "trello-client-impl",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -50,6 +50,10 @@ oss-nml/
 │   ├── ai_service/                 # FastAPI web service for AI
 │   ├── ai_adapter/                 # Adapter wrapping service client
 │   ├── ai_service_client/          # Auto-generated AI service client
+│   ├── ai_ticket_service/          # AI-powered ticket orchestration service
+│   ├── tickets_api/                # Abstract ticket interface (ABC)
+│   ├── tickets_client_impl/        # Google Tasks ticket implementation
+│   ├── trello_tickets_adapter/     # Trello ticket implementation (via Kanban API)
 │   ├── mail_client_api/            # Abstract mail client base class (ABC)
 │   ├── gmail_client_impl/          # Gmail-specific client implementation
 │   ├── mail_client_service/        # FastAPI web service for mail
@@ -161,6 +165,31 @@ uv run python main.py
 Conversational response: Hello there friend!
 Structured response: {'intent': 'create_ticket', 'title': 'Fix login redirect'}
 AI demo complete.
+```
+
+### Running the Multi-Backend Ticket Service
+
+The AI ticket service now supports multiple backends (Google Tasks and Trello):
+
+```bash
+# 1. Set up credentials for both backends
+export OPENAI_API_KEY="your_openai_api_key"
+
+# Google Tasks (existing)
+export TASKS_INTERACTIVE="false"
+export TASKS_CLIENT_ID="your_tasks_client_id"
+export TASKS_CLIENT_SECRET="your_tasks_client_secret" 
+export TASKS_REFRESH_TOKEN="your_tasks_refresh_token"
+
+# Trello (new)
+export TRELLO_TOKEN="your_trello_token"
+export TRELLO_BOARD_ID="your_trello_board_id"
+
+# 2. Start the AI ticket service (Terminal 1)
+uv run uvicorn ai_ticket_service.main:app --reload --port 8002
+
+# 3. Run the multi-backend demo (Terminal 2)
+uv run python example_multi_backend.py
 ```
 
 ### Running with Local Implementation (No Service)
@@ -296,6 +325,57 @@ response = client.generate_response(
 print(response)
 "
 # Output: "Hello there friend!"
+```
+
+#### Example 5: AI Ticket Management (Google Tasks)
+
+```bash
+# Terminal 1: Start the AI ticket service
+export OPENAI_API_KEY="your_key"
+export TASKS_INTERACTIVE="false"
+uv run uvicorn ai_ticket_service.main:app --reload --port 8002
+
+# Terminal 2: Create tickets with natural language
+curl -X POST http://127.0.0.1:8002/command \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": "Create a ticket to fix the login redirect bug",
+    "backend": "google_tasks"
+  }'
+
+# Output: 
+# {
+#   "ai_result": {"intent": "create_ticket", "title": "Fix login redirect bug", ...},
+#   "ticket_result": {"id": "task_123", "title": "Fix login redirect bug", "status": "open"},
+#   "backend_used": "google_tasks",
+#   "backend_status": "success"
+# }
+```
+
+#### Example 6: AI Ticket Management (Trello)
+
+```bash
+# Terminal 1: Start the AI ticket service with Trello
+export OPENAI_API_KEY="your_key"
+export TRELLO_TOKEN="your_trello_token"
+export TRELLO_BOARD_ID="your_board_id"
+uv run uvicorn ai_ticket_service.main:app --reload --port 8002
+
+# Terminal 2: Create tickets in Trello
+curl -X POST http://127.0.0.1:8002/command \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": "Create a high priority ticket for database optimization",
+    "backend": "trello"
+  }'
+
+# Search Trello tickets
+curl -X POST http://127.0.0.1:8002/command \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_input": "Find all tickets about bugs",
+    "backend": "trello"
+  }'
 ```
 
 ## How It Works
