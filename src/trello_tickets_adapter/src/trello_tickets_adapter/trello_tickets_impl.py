@@ -14,6 +14,9 @@ from trello_tickets_adapter.ticket_impl import TrelloTicket
 # Import trello implementation to register it globally
 import trello_client_impl  # noqa: F401
 
+# Register the trello client implementation
+trello_client_impl.register()
+
 
 class TrelloTicketsClient(TicketInterface):
     """Adapter that implements TicketInterface using Trello via Kanban API."""
@@ -50,7 +53,9 @@ class TrelloTicketsClient(TicketInterface):
         os.environ['TRELLO_TOKEN'] = token
         os.environ['REDIRECT_URI'] = 'http://localhost:8000/callback'  # Default for their OAuth
         
-        self.kanban_client = get_kanban_client(token=token)
+        # Create TrelloClientImpl directly instead of using get_kanban_client
+        from trello_client_impl.trello_impl import TrelloClientImpl
+        self.kanban_client = TrelloClientImpl(token=token)
         
         # List name mappings
         self.status_to_list_name = {

@@ -60,16 +60,14 @@ class TicketBackendFactory:
             if not board_id:
                 raise RuntimeError("TRELLO_BOARD_ID environment variable is required for Trello backend")
             
-            from trello_tickets_adapter.direct_trello_impl import DirectTrelloClient
+            # Use our adapter that wraps their TrelloClientImpl
+            from trello_tickets_adapter.trello_tickets_impl import TrelloTicketsClient
             
-            return DirectTrelloClient(
+            return TrelloTicketsClient(
                 api_key=api_key,
                 api_secret=api_secret,
                 token=token,
                 board_id=board_id,
-                todo_list_name=os.getenv("TRELLO_TODO_LIST", "To Do"),
-                in_progress_list_name=os.getenv("TRELLO_IN_PROGRESS_LIST", "In Progress"),
-                done_list_name=os.getenv("TRELLO_DONE_LIST", "Done"),
             )
         
         else:
