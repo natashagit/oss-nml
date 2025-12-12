@@ -6,6 +6,10 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
+
+from prometheus_fastapi_instrumentator import Instrumentator 
+
+
 import openai_impl  # noqa: F401 - registers default impl
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from ai_service.models import GenerateRequest, GenerateResponse, HealthCheckResponse
@@ -15,6 +19,11 @@ app = FastAPI(
     description="FastAPI wrapper around AI interface",
     version="0.1.0",
 )
+
+
+# This creates the /metrics endpoint for Prometheus to scrape
+Instrumentator().instrument(app).expose(app)
+# -----------------------------------------
 
 # Load environment variables from .env if present
 load_dotenv()
