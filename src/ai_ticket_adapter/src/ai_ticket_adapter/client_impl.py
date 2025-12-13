@@ -20,11 +20,13 @@ class TicketOrchestrationAdapter:
         self,
         user_input: str,
         system_prompt: str | None = None,
+        backend: str | None = None,
     ) -> CommandResponse | None:
         """Call the /command endpoint and return the parsed response or None on validation errors."""
         request = CommandRequest(
             user_input=user_input,
             system_prompt=system_prompt if system_prompt is not None else UNSET,
+            backend=backend if backend is not None else UNSET,
         )
         response = sync(client=self._client, body=request)
         if isinstance(response, CommandResponse):
@@ -35,9 +37,10 @@ class TicketOrchestrationAdapter:
         self,
         user_input: str,
         system_prompt: str | None = None,
+        backend: str | None = None,
     ) -> CommandResponse:
         """Call /command and raise if no response is parsed."""
-        response = self.command(user_input=user_input, system_prompt=system_prompt)
+        response = self.command(user_input=user_input, system_prompt=system_prompt, backend=backend)
         if response is None:
             msg = "No response returned from AI ticket service"
             raise RuntimeError(msg)

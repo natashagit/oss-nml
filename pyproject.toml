@@ -14,6 +14,8 @@ dependencies = [
     "gtask-client-impl @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/gtask_client_impl",
     "task-client-api @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_api",
     "task-client-service @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_service",
+    "trello-client-impl @ git+https://github.com/austinhuang0131/oss-fall2025.git@hw3#subdirectory=src/trello_client_impl",
+    "trello-ticket-impl @ git+https://github.com/austinhuang0131/oss-fall2025.git@hw3#subdirectory=src/trello_ticket_impl",
 ]
 
 [project.optional-dependencies]
@@ -104,6 +106,8 @@ module = [
     "tickets_client_impl.*",
     "gtask_client_impl.*",
     "prometheus_fastapi_instrumentator.*",
+    "trello_client_impl.*",
+    "trello_ticket_impl.*",
     "requests",
 ]
 ignore_missing_imports = true
@@ -111,7 +115,8 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 pythonpath = [
     ".", 
-    "src"
+    "src",
+    "src/ai_ticket_service_client"
 ]
 testpaths = [
     "src/ai_service/tests",
@@ -161,6 +166,8 @@ exclude_lines = [
 [dependency-groups]
 dev = [
     "openapi-python-client>=0.26.1",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
 ]
 
 [tool.uv.sources]
@@ -181,3 +188,5 @@ task-client-api = { git = "https://github.com/gsiri-code/oss-taapp.git", branch 
 ai_ticket_service = { workspace = true }
 ai_ticket_service_client = { workspace = true }
 ai_ticket_adapter = { workspace = true }
+trello-client-impl = { git = "https://github.com/austinhuang0131/oss-fall2025.git", branch = "hw3", subdirectory = "src/trello_client_impl" }
+trello-ticket-impl = { git = "https://github.com/austinhuang0131/oss-fall2025.git", branch = "hw3", subdirectory = "src/trello_ticket_impl" }

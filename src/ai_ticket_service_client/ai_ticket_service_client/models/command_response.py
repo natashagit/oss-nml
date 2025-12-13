@@ -20,10 +20,14 @@ class CommandResponse:
     Attributes:
         ai_result (Union['CommandResponseAiResultType0', str]):
         ticket_result (Union['CommandResponseTicketResultType0', None, list['CommandResponseTicketResultType1Item']]):
+        backend_used (str):
+        backend_status (str):
     """
 
     ai_result: Union["CommandResponseAiResultType0", str]
     ticket_result: Union["CommandResponseTicketResultType0", None, list["CommandResponseTicketResultType1Item"]]
+    backend_used: str
+    backend_status: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -48,12 +52,18 @@ class CommandResponse:
         else:
             ticket_result = self.ticket_result
 
+        backend_used = self.backend_used
+
+        backend_status = self.backend_status
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
                 "ai_result": ai_result,
                 "ticket_result": ticket_result,
+                "backend_used": backend_used,
+                "backend_status": backend_status,
             }
         )
 
@@ -114,9 +124,15 @@ class CommandResponse:
 
         ticket_result = _parse_ticket_result(d.pop("ticket_result"))
 
+        backend_used = d.pop("backend_used")
+
+        backend_status = d.pop("backend_status")
+
         command_response = cls(
             ai_result=ai_result,
             ticket_result=ticket_result,
+            backend_used=backend_used,
+            backend_status=backend_status,
         )
 
         command_response.additional_properties = d

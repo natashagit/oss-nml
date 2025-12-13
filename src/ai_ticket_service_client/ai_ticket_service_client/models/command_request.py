@@ -17,16 +17,20 @@ class CommandRequest:
         user_input (str):
         system_prompt (Union[Unset, str]):  Default: 'You are a strict router that extracts intent, title,
             description.'.
+        backend (Union[Unset, str]):  Default: 'google_tasks'.
     """
 
     user_input: str
     system_prompt: Union[Unset, str] = "You are a strict router that extracts intent, title, description."
+    backend: Union[Unset, str] = "google_tasks"
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         user_input = self.user_input
 
         system_prompt = self.system_prompt
+
+        backend = self.backend
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -37,6 +41,8 @@ class CommandRequest:
         )
         if system_prompt is not UNSET:
             field_dict["system_prompt"] = system_prompt
+        if backend is not UNSET:
+            field_dict["backend"] = backend
 
         return field_dict
 
@@ -47,9 +53,12 @@ class CommandRequest:
 
         system_prompt = d.pop("system_prompt", UNSET)
 
+        backend = d.pop("backend", UNSET)
+
         command_request = cls(
             user_input=user_input,
             system_prompt=system_prompt,
+            backend=backend,
         )
 
         command_request.additional_properties = d
