@@ -67,7 +67,7 @@ def sync_detailed(
 ) -> Response[Union[CommandResponse, HTTPValidationError]]:
     """Command
 
-     Process natural language into ticket operations.
+     Process natural language into ticket operations with backend selection.
 
     Args:
         body (CommandRequest): Incoming natural language command for ticket creation.
@@ -98,7 +98,7 @@ def sync(
 ) -> Optional[Union[CommandResponse, HTTPValidationError]]:
     """Command
 
-     Process natural language into ticket operations.
+     Process natural language into ticket operations with backend selection.
 
     Args:
         body (CommandRequest): Incoming natural language command for ticket creation.
@@ -124,7 +124,7 @@ async def asyncio_detailed(
 ) -> Response[Union[CommandResponse, HTTPValidationError]]:
     """Command
 
-     Process natural language into ticket operations.
+     Process natural language into ticket operations with backend selection.
 
     Args:
         body (CommandRequest): Incoming natural language command for ticket creation.
@@ -153,7 +153,7 @@ async def asyncio(
 ) -> Optional[Union[CommandResponse, HTTPValidationError]]:
     """Command
 
-     Process natural language into ticket operations.
+     Process natural language into ticket operations with backend selection.
 
     Args:
         body (CommandRequest): Incoming natural language command for ticket creation.
