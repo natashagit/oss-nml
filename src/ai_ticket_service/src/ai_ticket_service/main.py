@@ -13,6 +13,7 @@ from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from ai_ticket_service import tickets_api_compat  # noqa: F401 - Import compatibility layer early
 from ai_ticket_service.models import CommandRequest, CommandResponse, HealthCheckResponse
 from tickets_api import Ticket, TicketInterface, TicketStatus
+from tickets_client_impl import TicketsClient  # Import at module level for integration tests
 
 app = FastAPI(
     title="AI Ticket Orchestration Service",
@@ -43,8 +44,6 @@ class TicketBackendFactory:
 
         """
         if backend_type == "google_tasks":
-            from tickets_client_impl import TicketsClient  # noqa: PLC0415
-
             interactive = os.getenv("TASKS_INTERACTIVE", "false").lower() == "true"
             return TicketsClient(interactive=interactive)
 

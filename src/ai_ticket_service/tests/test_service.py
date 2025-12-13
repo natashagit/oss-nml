@@ -244,7 +244,7 @@ def test_backend_factory_google_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
             pass
         def create_ticket(self, title: str, description: str, assignee: str | None = None) -> object:
             return _FakeTicketsClient()._ticket
-    monkeypatch.setattr("tickets_client_impl.TicketsClient", MockTicketsClient)
+    monkeypatch.setattr("ai_ticket_service.main.TicketsClient", MockTicketsClient)
     backend = TicketBackendFactory.create_backend("google_tasks")
     assert backend is not None
     assert hasattr(backend, "create_ticket")
@@ -264,7 +264,7 @@ def test_backend_status_check(monkeypatch: pytest.MonkeyPatch) -> None:
     class MockTicketsClient:
         def __init__(self, **kwargs: Any) -> None:
             pass
-    monkeypatch.setattr("tickets_client_impl.TicketsClient", MockTicketsClient)
+    monkeypatch.setattr("ai_ticket_service.main.TicketsClient", MockTicketsClient)
     # Google Tasks should work with mock
     status = _get_backend_status("google_tasks")
     assert status == "success"
