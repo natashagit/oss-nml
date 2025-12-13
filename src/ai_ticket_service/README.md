@@ -49,8 +49,16 @@ Then open `http://127.0.0.1:8000/docs` for the interactive API.
 - Set `TICKET_BACKEND=trello` to use Trello.
 - You can also pass `backend` in the `POST /command` payload to override per request.
 
+## 📊 Telemetry & Monitoring (Live URLs)
+* **Grafana Dashboard (Visuals):** [http://44.204.205.83:3000](http://44.204.205.83:3000)
+  * *Login:* `admin` / `admin`
+  * *View:* Real-time latency and error rate graphs.
+* **Raw Metrics:** [http://44.204.205.83:8000/metrics](http://44.204.205.83:8000/metrics)
+  * *Description:* Prometheus formatted metrics exposed by the AI Service.
+
 ## Testing
 Run component tests for this service:
 ```bash
 UV_CACHE_DIR=.uv_cache uv run --extra dev pytest src/ai_ticket_service/tests
 ```
+
