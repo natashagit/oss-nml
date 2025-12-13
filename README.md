@@ -1,14 +1,16 @@
-# Python Application Template: Component-Based Architecture
+# AI + Ticket Orchestration Workspace
 
 [![CircleCI](https://circleci.com/gh/ivanearisty/oss-taapp.svg?style=shield)](https://circleci.com/gh/ivanearisty/oss-taapp)
 [![Coverage](https://img.shields.io/badge/coverage-85%2B%25-brightgreen)](https://circleci.com/gh/ivanearisty/oss-taapp)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-This repository serves as a professional-grade template for modern Python projects. It demonstrates a robust, component-based architecture by building two complete systems:
+This repository is a component-oriented workspace that demonstrates natural-language orchestration for tickets plus earlier AI/Mail stacks. The primary focus for HW3 is the AI Ticket Service that routes user text through an AI model, extracts intent, and executes ticket actions against a pluggable backend (Google Tasks or Trello).
 
-1. **AI Service Stack**: OpenAI-powered AI assistant with conversational and structured output capabilities
-2. **Mail Client Stack**: Gmail API integration for email management
+Included stacks:
+1. **AI Ticket Stack (new)**: AI → Ticket backend (Google Tasks or Trello) with a FastAPI orchestration service and adapter.
+2. **AI Service Stack**: OpenAI-powered AI assistant with conversational and structured output capabilities.
+3. **Mail Client Stack**: Gmail API integration for email management.
 
 The project emphasizes strict separation of concerns, dependency injection, and a comprehensive automated toolchain to enforce code quality and best practices.
 
@@ -22,9 +24,15 @@ This project is built on the principle of "programming integrated over time." Th
 
 ## Core Components
 
-The project is a `uv` workspace containing two complete component stacks:
+The project is a `uv` workspace containing multiple stacks:
 
-### AI Service Stack
+### AI Ticket Stack (HW3)
+1. **`ai_ticket_service`**: FastAPI orchestration service that calls AI to extract intent and then calls the configured ticket backend.
+2. **`ai_ticket_service_client`**: Auto-generated client for the ticket orchestration service.
+3. **`ai_ticket_adapter`**: Adapter that wraps the generated client and exposes the same contract locally.
+4. **Backends**: `tickets_client_impl` (Google Tasks) and `trello_ticket_impl` (Trello) selectable via `TICKET_BACKEND`.
+
+### AI Service Stack (HW2)
 
 1. **`ai_api`**: Defines the abstract `AIInterface` base class (ABC). This is the contract for AI operations (e.g., `generate_response`).
 2. **`openai_impl`**: Provides the `OpenAIClient` class, a concrete implementation using the OpenAI API. Supports both conversational and structured output.
@@ -60,7 +68,7 @@ oss-nml/
 │   └── e2e/                        # End-to-end application tests
 ├── docs/                           # Documentation source files
 ├── .circleci/                      # CircleCI configuration
-├── main.py                         # AI service demo entry point
+├── main.py                         # Local demo entry point (AI ticket orchestration)
 ├── pyproject.toml                  # Project configuration (dependencies, tools)
 ├── uv.lock                         # Locked dependency versions
 └── .env.example                    # Example environment variables
@@ -126,21 +134,51 @@ oss-nml/
     .venv\Scripts\Activate.ps1
     ```
 
-6.  **Run the AI Demo:**
+6.  **Run the AI Ticket Orchestration Demo:**
     ```bash
-    # Terminal 1: Start the AI service
-    uv run uvicorn ai_service.main:app --reload
-    
-    # Terminal 2: Run the demo
-    uv run python main.py
+    # Terminal 1: Start the AI ticket service (uses TICKET_BACKEND env)
+    UV_CACHE_DIR=.uv_cache PYTHONPATH=src uv run --extra dev uvicorn ai_ticket_service.main:app --reload --port 8000
+
+    # Terminal 2: Call the service via adapter demo
+    TICKET_BACKEND=trello uv run python main.py
     ```
-    
+
     **For Gmail (Optional):**
     Run the mail client once to perform the interactive OAuth flow. This will open a browser window for you to grant permission. After you approve, a `token.json` file will be created.
 
 ## How to Run
 
-### Running the AI Service Demo
+### Running the AI Ticket Service
+
+Configure environment variables:
+```bash
+export OPENAI_API_KEY="your_openai_api_key"
+# Backend selection
+export TICKET_BACKEND=google_tasks   # or trello
+
+# Google Tasks backend
+export TASKS_CLIENT_ID=...
+export TASKS_CLIENT_SECRET=...
+export TASKS_REFRESH_TOKEN=...
+
+# Trello backend
+export TRELLO_API_KEY=...
+export TRELLO_API_SECRET=...
+export TRELLO_TOKEN=...
+export TRELLO_BOARD_ID=...
+```
+
+Start the service:
+```bash
+UV_CACHE_DIR=.uv_cache PYTHONPATH=src uv run --extra dev uvicorn ai_ticket_service.main:app --reload --port 8000
+```
+
+Use `main.py` to exercise the adapter against the running service:
+```bash
+TICKET_BACKEND=trello uv run python main.py
+```
+
+### Running the AI Service Demo (HW2)
 
 The main demo (`main.py`) demonstrates the AI service with both conversational and structured output:
 

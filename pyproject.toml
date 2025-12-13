@@ -7,6 +7,15 @@ requires-python = ">=3.11"
 dependencies = [
     "ai-api",
     "openai-impl",
+    "tickets-api",
+    "tickets-client-impl",
+    "ai-ticket-adapter",
+    "prometheus-fastapi-instrumentator>=6.1.0",
+    "gtask-client-impl @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/gtask_client_impl",
+    "task-client-api @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_api",
+    "task-client-service @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_service",
+    "trello-client-impl @ git+https://github.com/austinhuang0131/oss-fall2025.git@hw3#subdirectory=src/trello_client_impl",
+    "trello-ticket-impl @ git+https://github.com/austinhuang0131/oss-fall2025.git@hw3#subdirectory=src/trello_ticket_impl",
 ]
 
 [project.optional-dependencies]
@@ -35,11 +44,20 @@ members = [
   "src/ai_service",
   "src/ai_adapter",
   "src/ai_service_client",
+  "src/tickets_api",
+  "src/tickets_client_impl",
+  "src/ai_ticket_service",
+  "src/ai_ticket_service_client",
+  "src/ai_ticket_adapter",
 ]
 
 [tool.ruff]
 line-length = 130 # high for top level due to tests
 target-version = "py311"
+extend-exclude = [
+  "src/ai_ticket_service_client",
+  "src/ai_ticket_service_client/**",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -48,7 +66,7 @@ ignore = [
   "D213", # `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
   "S101", # Use of `assert` detected --> Asserts are good in our opinion. Tests use asserts profusely.
 ]
-per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"] }
+per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415", "D103", "I001", "ARG005", "PLR2004"] }
 
 [tool.mypy]
 strict = true
@@ -64,6 +82,11 @@ mypy_path = [
     "src/ai_service/src",
     "src/ai_adapter/src",
     "src/ai_service_client",
+    "src/tickets_api/src",
+    "src/tickets_client_impl/src",
+    "src/ai_ticket_service/src",
+    "src/ai_ticket_service_client",
+    "src/ai_ticket_adapter/src",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -79,19 +102,29 @@ module = [
     "openai_impl.*",
     "ai_adapter.*",
     "ai_service_client.*",
+    "tickets_api.*",
+    "tickets_client_impl.*",
+    "gtask_client_impl.*",
+    "prometheus_fastapi_instrumentator.*",
+    "trello_client_impl.*",
+    "trello_ticket_impl.*",
+    "requests",
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 pythonpath = [
     ".", 
-    "src"
+    "src",
+    "src/ai_ticket_service_client"
 ]
 testpaths = [
     "src/ai_service/tests",
     "src/ai_adapter/tests",
     "src/ai_api/tests",
     "src/openai_impl/tests",
+    "src/ai_ticket_service/tests",
+    "src/ai_ticket_adapter/tests",
     "tests/integration",
     "tests/e2e",
 ]
@@ -111,6 +144,10 @@ omit = [
     "*/__main__.py",            
     "src/mail_client_service_client/*", # Auto-generated OpenAPI client, tested indirectly
     "src/ai_service_client/*",
+    "src/ai_ticket_service_client/*",
+    "src/tickets_client_impl/*",
+    "src/tickets_api/*",
+    "src/openai_impl/*",
     "src/mail_client_api/*",
     "src/mail_client_adapter/*",
     "src/mail_client_service/*",
@@ -129,6 +166,8 @@ exclude_lines = [
 [dependency-groups]
 dev = [
     "openapi-python-client>=0.26.1",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
 ]
 
 [tool.uv.sources]
@@ -142,3 +181,12 @@ openai_impl = { workspace = true }
 ai_service = { workspace = true }
 ai_adapter = { workspace = true }
 ai_service_client = { workspace = true }
+tickets_api = { workspace = true }
+tickets_client_impl = { workspace = true }
+gtask-client-impl = { git = "https://github.com/gsiri-code/oss-taapp.git", branch = "feat/aligning-ticket-api", subdirectory = "src/gtask_client_impl" }
+task-client-api = { git = "https://github.com/gsiri-code/oss-taapp.git", branch = "feat/aligning-ticket-api", subdirectory = "src/task_client_api" }
+ai_ticket_service = { workspace = true }
+ai_ticket_service_client = { workspace = true }
+ai_ticket_adapter = { workspace = true }
+trello-client-impl = { git = "https://github.com/austinhuang0131/oss-fall2025.git", branch = "hw3", subdirectory = "src/trello_client_impl" }
+trello-ticket-impl = { git = "https://github.com/austinhuang0131/oss-fall2025.git", branch = "hw3", subdirectory = "src/trello_ticket_impl" }
