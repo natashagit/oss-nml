@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException
 
 import openai_impl  # noqa: F401 - registers default AI implementation
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
+from ai_ticket_service import tickets_api_compat  # noqa: F401 - Import compatibility layer early
 from ai_ticket_service.models import CommandRequest, CommandResponse, HealthCheckResponse
 from tickets_api import Ticket, TicketInterface, TicketStatus
 
@@ -192,7 +193,7 @@ def _parse_status(status_str: str | None) -> TicketStatus | None:
             "done": TicketStatus.CLOSED,
         }
         normalized = status_str.lower().strip()
-        return status_mapping.get(normalized, TicketStatus(normalized.upper()))
+        return status_mapping.get(normalized)
     except ValueError:
         return None
 
