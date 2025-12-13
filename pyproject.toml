@@ -106,6 +106,8 @@ module = [
     "tickets_client_impl.*",
     "gtask_client_impl.*",
     "prometheus_fastapi_instrumentator.*",
+    "trello_client_impl.*",
+    "trello_ticket_impl.*",
     "requests",
 ]
 ignore_missing_imports = true

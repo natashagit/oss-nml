@@ -61,8 +61,10 @@ class TicketBackendFactory:
                 raise RuntimeError(msg)
 
             # Import compatibility layer for their expected import structure
-            from trello_client_impl.oauth import TrelloOAuthHandler  # noqa: PLC0415
-            from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # noqa: PLC0415
+            from trello_client_impl.oauth import TrelloOAuthHandler  # noqa: PLC0415  # type: ignore[import-untyped]
+            from trello_ticket_impl.trello_ticket_impl import (  # noqa: PLC0415
+                TrelloTicketClientImpl,  # type: ignore[import-untyped]
+            )
 
             from ai_ticket_service import tickets_api_compat  # noqa: F401, PLC0415
 
@@ -74,7 +76,7 @@ class TicketBackendFactory:
             oauth_handler = TrelloOAuthHandler.from_env()
 
             # Use their exact parameter names and approach
-            return TrelloTicketClientImpl(
+            return TrelloTicketClientImpl(  # type: ignore[no-any-return]
                 token=token,
                 oauth_handler=oauth_handler,
                 board_id=board_id,
