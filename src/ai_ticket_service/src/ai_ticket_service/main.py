@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 
-
 import openai_impl  # noqa: F401 - registers default AI implementation
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from ai_ticket_service import tickets_api_compat  # noqa: F401 - Import compatibility layer early
@@ -24,7 +23,6 @@ app = FastAPI(
 )
 
 Instrumentator().instrument(app).expose(app)  # exposes /metrics by default
-
 
 load_dotenv()
 logger = logging.getLogger(__name__)
