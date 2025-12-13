@@ -25,69 +25,73 @@ logger = logging.getLogger(__name__)
 
 class TicketBackendFactory:
     """Factory for creating ticket backend clients."""
-    
+
     @staticmethod
     def create_backend(backend_type: str) -> TicketInterface:
         """Create a ticket backend client.
-        
+
         Args:
             backend_type: Type of backend ("google_tasks" or "trello")
-            
+
         Returns:
             TicketInterface: Configured backend client
-            
+
         Raises:
             ValueError: If backend type is not supported
             RuntimeError: If backend configuration is missing
+
         """
         if backend_type == "google_tasks":
-            from tickets_client_impl import TicketsClient
+            from tickets_client_impl import TicketsClient  # noqa: PLC0415
+
             interactive = os.getenv("TASKS_INTERACTIVE", "false").lower() == "true"
             return TicketsClient(interactive=interactive)
-        
-        elif backend_type == "trello":
+
+        if backend_type == "trello":
             # Check required environment variables using their exact names
             token = os.getenv("TRELLO_TOKEN")
             board_id = os.getenv("TRELLO_BOARD_ID")
-            
+
             if not token:
-                raise RuntimeError("TRELLO_TOKEN environment variable is required for Trello backend")
+                msg = "TRELLO_TOKEN environment variable is required for Trello backend"
+                raise RuntimeError(msg)
             if not board_id:
-                raise RuntimeError("TRELLO_BOARD_ID environment variable is required for Trello backend")
-            
+                msg = "TRELLO_BOARD_ID environment variable is required for Trello backend"
+                raise RuntimeError(msg)
+
             # Import compatibility layer for their expected import structure
-            from ai_ticket_service import tickets_api_compat  # noqa: F401
-            
-            # Use their exact TrelloTicketClientImpl implementation unchanged
-            from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl
-            from trello_client_impl.oauth import TrelloOAuthHandler
-            
+            from trello_client_impl.oauth import TrelloOAuthHandler  # noqa: PLC0415
+            from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # noqa: PLC0415
+
+            from ai_ticket_service import tickets_api_compat  # noqa: F401, PLC0415
+
             # Set default REDIRECT_URI if not provided (following their pattern)
-            if not os.getenv('REDIRECT_URI'):
-                os.environ['REDIRECT_URI'] = 'http://localhost:8000/callback'
-            
+            if not os.getenv("REDIRECT_URI"):
+                os.environ["REDIRECT_URI"] = "http://localhost:8000/callback"
+
             # Create OAuth handler using their from_env method (validates TRELLO_API_KEY, TRELLO_API_SECRET, REDIRECT_URI)
             oauth_handler = TrelloOAuthHandler.from_env()
-            
+
             # Use their exact parameter names and approach
             return TrelloTicketClientImpl(
                 token=token,
                 oauth_handler=oauth_handler,
                 board_id=board_id,
             )
-        
-        else:
-            raise ValueError(f"Unsupported backend type: {backend_type}")
+
+        msg = f"Unsupported backend type: {backend_type}"
+        raise ValueError(msg)
 
 
 def _get_backend_status(backend_type: str) -> str:
     """Check if backend is properly configured."""
     try:
         TicketBackendFactory.create_backend(backend_type)
-        return "success"
     except (ValueError, RuntimeError) as e:
         logger.warning("Backend %s not configured: %s", backend_type, e)
         return "not_configured"
+    else:
+        return "success"
 
 
 def _serialize_ticket(ticket: Ticket) -> dict[str, Any]:
@@ -155,23 +159,23 @@ def command(request: CommandRequest) -> CommandResponse:
     }
 
     ai_result = _ai_generate(request, schema_override=schema)
-    
+
     ticket_result: dict[str, Any] | list[dict[str, Any]] | None = None
     backend_status = _get_backend_status(request.backend)
-    
+
     if isinstance(ai_result, dict) and backend_status == "success":
         try:
             tickets_client = TicketBackendFactory.create_backend(request.backend)
             ticket_result = _handle_intent(ai_result, tickets_client)
-        except Exception as exc:
-            logger.error("Failed to process ticket operation: %s", exc)
+        except (ValueError, RuntimeError):
+            logger.exception("Failed to process ticket operation")
             backend_status = "error"
 
     return CommandResponse(
-        ai_result=ai_result, 
+        ai_result=ai_result,
         ticket_result=ticket_result,
         backend_used=request.backend,
-        backend_status=backend_status
+        backend_status=backend_status,
     )
 
 

@@ -163,6 +163,8 @@ exclude_lines = [
 [dependency-groups]
 dev = [
     "openapi-python-client>=0.26.1",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
 ]
 
 [tool.uv.sources]

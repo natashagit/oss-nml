@@ -2278,6 +2278,8 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "openapi-python-client" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
 ]
 
 [package.metadata]
@@ -2307,7 +2309,11 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "openapi-python-client", specifier = ">=0.26.1" }]
+dev = [
+    { name = "openapi-python-client", specifier = ">=0.26.1" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+]
 
 [[package]]
 name = "task-client-api"
