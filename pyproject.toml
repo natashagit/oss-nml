@@ -113,7 +113,8 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 pythonpath = [
     ".", 
-    "src"
+    "src",
+    "src/ai_ticket_service_client"
 ]
 testpaths = [
     "src/ai_service/tests",

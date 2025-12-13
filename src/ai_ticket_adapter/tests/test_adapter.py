@@ -9,7 +9,12 @@ from ai_ticket_service_client.models import CommandResponse
 
 
 def test_command_returns_response(monkeypatch: pytest.MonkeyPatch) -> None:
-    expected = CommandResponse.from_dict({"ai_result": {"intent": "create_ticket"}, "ticket_result": {"id": "1"}})
+    expected = CommandResponse.from_dict({
+        "ai_result": {"intent": "create_ticket"},
+        "ticket_result": {"id": "1"},
+        "backend_used": "google_tasks",
+        "backend_status": "success",
+    })
 
     def fake_sync(*args: object, **kwargs: object) -> CommandResponse:
         del args, kwargs
