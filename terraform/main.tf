@@ -24,7 +24,7 @@ resource "tls_private_key" "pk" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "hw3-key-free-tier" # New name for Free Tier attempt
+  key_name   = "hw3-key-free-tier"
   public_key = tls_private_key.pk.public_key_openssh
 }
 
@@ -85,16 +85,13 @@ resource "aws_security_group" "sg" {
 
 # --- 3. SERVER ---
 resource "aws_instance" "server" {
-  ami           = "ami-0c7217cdde317cfec" # Ubuntu 22.04 (us-east-1)
-  
-  # CRITICAL CHANGE: Downgrade to Free Tier eligible instance
-  instance_type = "t3.micro" 
+  ami           = "ami-0c7217cdde317cfec"
+  instance_type = "t3.micro"
   
   key_name      = aws_key_pair.generated_key.key_name
   subnet_id     = aws_subnet.lab_subnet.id
   vpc_security_group_ids = [aws_security_group.sg.id]
 
-  # CRITICAL ADDITION: Create 2GB Swap file so t3.micro doesn't crash
   user_data = <<-EOF
               #!/bin/bash
               set -e
@@ -110,9 +107,9 @@ resource "aws_instance" "server" {
               apt-get update
               apt-get install -y docker.io docker-compose-v2 git
 
-              # 3. Clone Repo
+              # 3. Clone Repo (Pointing to the final, integrated branch)
               cd /home/ubuntu
-              git clone --branch hw3_add_telemetry https://github.com/natashagit/oss-nml.git app
+              git clone --branch hw_3_second_submission https://github.com/natashagit/oss-nml.git app
 
               # 4. Permissions
               chown -R ubuntu:ubuntu /home/ubuntu/app
