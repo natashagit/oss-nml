@@ -48,7 +48,12 @@ def _first_ticket_id(ticket_result: object) -> str | None:
 
 
 def _call(adapter: TicketOrchestrationAdapter, user_input: str) -> dict[str, Any]:
-    resp = adapter.raw_response(user_input=user_input, system_prompt=SYSTEM_PROMPT)
+    backend = os.getenv("TICKET_BACKEND", "google_tasks")
+    resp = adapter.raw_response(
+        user_input=user_input,
+        system_prompt=SYSTEM_PROMPT,
+        backend=backend,
+    )
     print("AI result:", resp.ai_result)  # noqa: T201
     print("Ticket result:", resp.ticket_result)  # noqa: T201
     return {"ai_result": resp.ai_result, "ticket_result": resp.ticket_result}

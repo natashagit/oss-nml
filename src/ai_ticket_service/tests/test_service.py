@@ -238,12 +238,15 @@ def test_health_endpoint(client: TestClient) -> None:
 def test_backend_factory_google_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test TicketBackendFactory with Google Tasks backend."""
     from ai_ticket_service.main import TicketBackendFactory
+
     # Mock the TicketsClient to avoid credential issues
     class MockTicketsClient:
         def __init__(self, **kwargs: Any) -> None:
             pass
+
         def create_ticket(self, title: str, description: str, assignee: str | None = None) -> object:
             return _FakeTicketsClient()._ticket
+
     monkeypatch.setattr("ai_ticket_service.main.TicketsClient", MockTicketsClient)
     backend = TicketBackendFactory.create_backend("google_tasks")
     assert backend is not None
@@ -253,6 +256,7 @@ def test_backend_factory_google_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_backend_factory_invalid_backend() -> None:
     """Test TicketBackendFactory with invalid backend."""
     from ai_ticket_service.main import TicketBackendFactory
+
     with pytest.raises(ValueError, match="Unsupported backend type"):
         TicketBackendFactory.create_backend("invalid_backend")
 
@@ -260,10 +264,12 @@ def test_backend_factory_invalid_backend() -> None:
 def test_backend_status_check(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test _get_backend_status function."""
     from ai_ticket_service.main import _get_backend_status
+
     # Mock successful backend creation
     class MockTicketsClient:
         def __init__(self, **kwargs: Any) -> None:
             pass
+
     monkeypatch.setattr("ai_ticket_service.main.TicketsClient", MockTicketsClient)
     # Google Tasks should work with mock
     status = _get_backend_status("google_tasks")
@@ -277,6 +283,7 @@ def test_status_parsing() -> None:
     """Test _parse_status function."""
     from ai_ticket_service.main import _parse_status
     from tickets_api import TicketStatus
+
     # Test valid status strings
     assert _parse_status("open") == TicketStatus.OPEN
     assert _parse_status("in progress") == TicketStatus.IN_PROGRESS
@@ -333,13 +340,16 @@ def test_command_with_backend_error(monkeypatch: pytest.MonkeyPatch, client: Tes
             "status": "",
         },
     )
+
     # Mock successful backend creation but failing ticket operation
     class FailingTicketsClient:
         def create_ticket(self, title: str, description: str, assignee: str | None = None) -> None:
             msg = "Ticket operation failed"
             raise RuntimeError(msg)
+
     def backend_factory(backend_type: str) -> object:
         return FailingTicketsClient()
+
     monkeypatch.setattr("ai_ticket_service.main.get_client", lambda: fake_ai)
     monkeypatch.setattr("ai_ticket_service.main.TicketBackendFactory.create_backend", backend_factory)
     response = client.post(
@@ -362,6 +372,7 @@ def test_handle_create_ticket() -> None:
     from ai_ticket_service.main import _handle_create_ticket
     from typing import cast
     from tickets_api import TicketInterface
+
     fake_tickets = cast("TicketInterface", _FakeTicketsClient())
     ai_result = {
         "title": "Test Title",
@@ -377,6 +388,7 @@ def test_handle_update_ticket() -> None:
     from ai_ticket_service.main import _handle_update_ticket
     from typing import cast
     from tickets_api import TicketInterface
+
     fake_tickets = cast("TicketInterface", _FakeTicketsClient())
     ai_result = {
         "ticket_id": "tid-123",
@@ -393,6 +405,7 @@ def test_handle_update_ticket_no_id() -> None:
     from ai_ticket_service.main import _handle_update_ticket
     from typing import cast
     from tickets_api import TicketInterface
+
     fake_tickets = cast("TicketInterface", _FakeTicketsClient())
     ai_result = {
         "title": "Updated Title",
@@ -407,6 +420,7 @@ def test_serialize_ticket() -> None:
     from ai_ticket_service.main import _serialize_ticket
     from typing import cast
     from tickets_api import Ticket
+
     fake_ticket = cast("Ticket", _FakeTicketsClient()._ticket)
     result = _serialize_ticket(fake_ticket)
     assert result["id"] == "tid-123"
@@ -419,6 +433,7 @@ def test_serialize_ticket() -> None:
 def test_backend_factory_trello_missing_token(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test TicketBackendFactory with Trello backend missing token."""
     from ai_ticket_service.main import TicketBackendFactory
+
     # Clear any existing Trello env vars
     for key in ["TRELLO_TOKEN", "TRELLO_BOARD_ID", "TRELLO_API_KEY", "TRELLO_API_SECRET"]:
         monkeypatch.delenv(key, raising=False)
@@ -429,6 +444,7 @@ def test_backend_factory_trello_missing_token(monkeypatch: pytest.MonkeyPatch) -
 def test_backend_factory_trello_missing_board_id(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test TicketBackendFactory with Trello backend missing board_id."""
     from ai_ticket_service.main import TicketBackendFactory
+
     # Set token but not board_id
     monkeypatch.setenv("TRELLO_TOKEN", "test_token")
     monkeypatch.delenv("TRELLO_BOARD_ID", raising=False)
@@ -439,6 +455,7 @@ def test_backend_factory_trello_missing_board_id(monkeypatch: pytest.MonkeyPatch
 def test_backend_factory_trello_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test TicketBackendFactory with Trello backend success path."""
     from ai_ticket_service.main import TicketBackendFactory
+
     # Mock all required environment variables
     monkeypatch.setenv("TRELLO_TOKEN", "test_token")
     monkeypatch.setenv("TRELLO_BOARD_ID", "test_board")
@@ -450,6 +467,7 @@ def test_backend_factory_trello_success(monkeypatch: pytest.MonkeyPatch) -> None
     class MockTrelloClient:
         def __init__(self, **kwargs: Any) -> None:
             self.kwargs = kwargs
+
         def create_ticket(self, title: str, description: str, assignee: str | None = None) -> object:
             return _FakeTicketsClient()._ticket
 
