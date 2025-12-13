@@ -18,7 +18,7 @@ COPY src/ ./src/
 
 # FIX 3: COMPLEX PYTHONPATH
 # CRITICAL FIX: Add /app/src/tickets_api to the path.
-ENV PYTHONPATH="${PYTHONPATH}:/app/src/ai_service/src:/app/src/ai_api/src:/app/src/openai_impl/src:/app/src/ai_ticket_service/src:/app/src/tickets_api"
+ENV PYTHONPATH="/app/src/ai_service/src:/app/src/ai_api/src:/app/src/openai_impl/src:/app/src/ai_ticket_service/src:/app/src/tickets_api/src"
 
 # CRITICAL CHANGE: Launch the integrated service
 CMD ["uvicorn", "ai_ticket_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
