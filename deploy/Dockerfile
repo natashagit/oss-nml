@@ -17,9 +17,8 @@ RUN pip install --no-cache-dir \
 COPY src/ ./src/
 
 # FIX 3: COMPLEX PYTHONPATH
-# Your code uses nested src folders (e.g., src/ai_api/src).
-# We must add EACH component's inner 'src' folder to the path so imports work.
-ENV PYTHONPATH="${PYTHONPATH}:/app/src/ai_service/src:/app/src/ai_api/src:/app/src/openai_impl/src:/app/src/ai_ticket_service/src"
+# CRITICAL FIX: Add /app/src/tickets_api to the path.
+ENV PYTHONPATH="${PYTHONPATH}:/app/src/ai_service/src:/app/src/ai_api/src:/app/src/openai_impl/src:/app/src/ai_ticket_service/src:/app/src/tickets_api"
 
 # CRITICAL CHANGE: Launch the integrated service
 CMD ["uvicorn", "ai_ticket_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
