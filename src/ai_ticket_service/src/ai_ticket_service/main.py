@@ -197,53 +197,64 @@ def _parse_status(status_str: str | None) -> TicketStatus | None:
         return None
 
 
+def _handle_create_ticket(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, Any]:
+    """Handle create_ticket intent."""
+    title = ai_result.get("title", f"AI Ticket {uuid4()}")
+    description = ai_result.get("description", "")
+    created = tickets_client.create_ticket(title=title, description=description)
+    return _serialize_ticket(created)
+
+
+def _handle_update_ticket(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, Any]:
+    """Handle update_ticket intent."""
+    ticket_id = ai_result.get("ticket_id")
+    if not ticket_id:
+        return {}
+
+    status = _parse_status(ai_result.get("status"))
+    title = ai_result.get("title") if ai_result.get("title") else None
+    # Only pass non-None values to update_ticket
+    kwargs = {"ticket_id": ticket_id}
+    if status is not None:
+        kwargs["status"] = status
+    if title:
+        kwargs["title"] = title
+    updated = tickets_client.update_ticket(**kwargs)
+    return _serialize_ticket(updated)
+
+
 def _handle_intent(
     ai_result: dict[str, Any],
     tickets_client: TicketInterface,
 ) -> dict[str, Any] | list[dict[str, Any]] | None:
     intent = ai_result.get("intent")
-    result: dict[str, Any] | list[dict[str, Any]] | None = None
 
     if intent == "create_ticket":
-        title = ai_result.get("title", f"AI Ticket {uuid4()}")
-        description = ai_result.get("description", "")
-        created = tickets_client.create_ticket(title=title, description=description)
-        result = _serialize_ticket(created)
+        return _handle_create_ticket(ai_result, tickets_client)
 
     if intent == "get_ticket":
         ticket_id = ai_result.get("ticket_id")
         if ticket_id:
             found = tickets_client.get_ticket(ticket_id)
-            result = _serialize_ticket(found) if found else None
+            return _serialize_ticket(found) if found else None
 
     if intent == "search_tickets":
         raw_query = ai_result.get("query")
         query = raw_query if isinstance(raw_query, str) and raw_query.strip() else None
         status = _parse_status(ai_result.get("status"))
         matches = tickets_client.search_tickets(query=query, status=status)
-        result = [_serialize_ticket(ticket) for ticket in matches]
+        return [_serialize_ticket(ticket) for ticket in matches]
 
     if intent == "update_ticket":
-        ticket_id = ai_result.get("ticket_id")
-        if ticket_id:
-            status = _parse_status(ai_result.get("status"))
-            title = ai_result.get("title") if ai_result.get("title") else None
-            # Only pass non-None values to update_ticket
-            kwargs = {"ticket_id": ticket_id}
-            if status is not None:
-                kwargs["status"] = status
-            if title:
-                kwargs["title"] = title
-            updated = tickets_client.update_ticket(**kwargs)
-            result = _serialize_ticket(updated)
+        return _handle_update_ticket(ai_result, tickets_client)
 
     if intent == "delete_ticket":
         ticket_id = ai_result.get("ticket_id")
         if ticket_id:
             success = tickets_client.delete_ticket(ticket_id)
-            result = {"deleted": success, "ticket_id": ticket_id}
+            return {"deleted": success, "ticket_id": ticket_id}
 
-    return result
+    return None
 
 
 if __name__ == "__main__":  # pragma: no cover
