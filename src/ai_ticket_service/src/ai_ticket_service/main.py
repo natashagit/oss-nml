@@ -11,8 +11,7 @@ from fastapi import FastAPI, HTTPException
 import openai_impl  # noqa: F401 - registers default AI implementation
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from ai_ticket_service.models import CommandRequest, CommandResponse, HealthCheckResponse
-from tickets_api import Ticket, TicketStatus
-from tickets_client_impl import TicketsClient
+from tickets_api import Ticket, TicketInterface, TicketStatus
 
 app = FastAPI(
     title="AI Ticket Orchestration Service",
@@ -22,6 +21,73 @@ app = FastAPI(
 
 load_dotenv()
 logger = logging.getLogger(__name__)
+
+
+class TicketBackendFactory:
+    """Factory for creating ticket backend clients."""
+    
+    @staticmethod
+    def create_backend(backend_type: str) -> TicketInterface:
+        """Create a ticket backend client.
+        
+        Args:
+            backend_type: Type of backend ("google_tasks" or "trello")
+            
+        Returns:
+            TicketInterface: Configured backend client
+            
+        Raises:
+            ValueError: If backend type is not supported
+            RuntimeError: If backend configuration is missing
+        """
+        if backend_type == "google_tasks":
+            from tickets_client_impl import TicketsClient
+            interactive = os.getenv("TASKS_INTERACTIVE", "false").lower() == "true"
+            return TicketsClient(interactive=interactive)
+        
+        elif backend_type == "trello":
+            # Check required environment variables using their exact names
+            token = os.getenv("TRELLO_TOKEN")
+            board_id = os.getenv("TRELLO_BOARD_ID")
+            
+            if not token:
+                raise RuntimeError("TRELLO_TOKEN environment variable is required for Trello backend")
+            if not board_id:
+                raise RuntimeError("TRELLO_BOARD_ID environment variable is required for Trello backend")
+            
+            # Import compatibility layer for their expected import structure
+            from ai_ticket_service import tickets_api_compat  # noqa: F401
+            
+            # Use their exact TrelloTicketClientImpl implementation unchanged
+            from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl
+            from trello_client_impl.oauth import TrelloOAuthHandler
+            
+            # Set default REDIRECT_URI if not provided (following their pattern)
+            if not os.getenv('REDIRECT_URI'):
+                os.environ['REDIRECT_URI'] = 'http://localhost:8000/callback'
+            
+            # Create OAuth handler using their from_env method (validates TRELLO_API_KEY, TRELLO_API_SECRET, REDIRECT_URI)
+            oauth_handler = TrelloOAuthHandler.from_env()
+            
+            # Use their exact parameter names and approach
+            return TrelloTicketClientImpl(
+                token=token,
+                oauth_handler=oauth_handler,
+                board_id=board_id,
+            )
+        
+        else:
+            raise ValueError(f"Unsupported backend type: {backend_type}")
+
+
+def _get_backend_status(backend_type: str) -> str:
+    """Check if backend is properly configured."""
+    try:
+        TicketBackendFactory.create_backend(backend_type)
+        return "success"
+    except (ValueError, RuntimeError) as e:
+        logger.warning("Backend %s not configured: %s", backend_type, e)
+        return "not_configured"
 
 
 def _serialize_ticket(ticket: Ticket) -> dict[str, Any]:
@@ -60,7 +126,7 @@ def health() -> HealthCheckResponse:
 
 @app.post("/command")
 def command(request: CommandRequest) -> CommandResponse:
-    """Process natural language into ticket operations."""
+    """Process natural language into ticket operations with backend selection."""
     schema = {
         "name": "ticket_command",
         "description": "Extract ticketing intent and relevant fields",
@@ -89,28 +155,47 @@ def command(request: CommandRequest) -> CommandResponse:
     }
 
     ai_result = _ai_generate(request, schema_override=schema)
-
+    
     ticket_result: dict[str, Any] | list[dict[str, Any]] | None = None
-    if isinstance(ai_result, dict):
-        interactive = os.getenv("TASKS_INTERACTIVE", "false").lower() == "true"
-        tickets_client = TicketsClient(interactive=interactive)
-        ticket_result = _handle_intent(ai_result, tickets_client)
+    backend_status = _get_backend_status(request.backend)
+    
+    if isinstance(ai_result, dict) and backend_status == "success":
+        try:
+            tickets_client = TicketBackendFactory.create_backend(request.backend)
+            ticket_result = _handle_intent(ai_result, tickets_client)
+        except Exception as exc:
+            logger.error("Failed to process ticket operation: %s", exc)
+            backend_status = "error"
 
-    return CommandResponse(ai_result=ai_result, ticket_result=ticket_result)
+    return CommandResponse(
+        ai_result=ai_result, 
+        ticket_result=ticket_result,
+        backend_used=request.backend,
+        backend_status=backend_status
+    )
 
 
 def _parse_status(status_str: str | None) -> TicketStatus | None:
     if not status_str:
         return None
     try:
-        return TicketStatus(status_str.lower())
+        # Map common status strings to TicketStatus enum values
+        status_mapping = {
+            "open": TicketStatus.OPEN,
+            "in progress": TicketStatus.IN_PROGRESS,
+            "in_progress": TicketStatus.IN_PROGRESS,
+            "closed": TicketStatus.CLOSED,
+            "done": TicketStatus.CLOSED,
+        }
+        normalized = status_str.lower().strip()
+        return status_mapping.get(normalized, TicketStatus(normalized.upper()))
     except ValueError:
         return None
 
 
 def _handle_intent(
     ai_result: dict[str, Any],
-    tickets_client: TicketsClient,
+    tickets_client: TicketInterface,
 ) -> dict[str, Any] | list[dict[str, Any]] | None:
     intent = ai_result.get("intent")
     result: dict[str, Any] | list[dict[str, Any]] | None = None
@@ -138,8 +223,14 @@ def _handle_intent(
         ticket_id = ai_result.get("ticket_id")
         if ticket_id:
             status = _parse_status(ai_result.get("status"))
-            title = ai_result.get("title")
-            updated = tickets_client.update_ticket(ticket_id=ticket_id, status=status, title=title)
+            title = ai_result.get("title") if ai_result.get("title") else None
+            # Only pass non-None values to update_ticket
+            kwargs = {"ticket_id": ticket_id}
+            if status is not None:
+                kwargs["status"] = status
+            if title:
+                kwargs["title"] = title
+            updated = tickets_client.update_ticket(**kwargs)
             result = _serialize_ticket(updated)
 
     if intent == "delete_ticket":

@@ -15,6 +15,7 @@ class CommandRequest(BaseModel):
 
     user_input: str
     system_prompt: str = "You are a strict router that extracts intent, title, description."
+    backend: str = "google_tasks"  # Options: "google_tasks" or "trello"
 
 
 class CommandResponse(BaseModel):
@@ -22,3 +23,5 @@ class CommandResponse(BaseModel):
 
     ai_result: dict[str, object] | str
     ticket_result: dict[str, object] | list[dict[str, object]] | None
+    backend_used: str
+    backend_status: str
