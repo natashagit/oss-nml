@@ -199,6 +199,9 @@ def _handle_create_ticket(ai_result: dict[str, Any], tickets_client: TicketInter
     title = ai_result.get("title", f"AI Ticket {uuid4()}")
     description = ai_result.get("description", "")
     created = tickets_client.create_ticket(title=title, description=description)
+    if not created:
+        logger.error("Failed to create ticket with title: %s", title)
+        return {}
     return _serialize_ticket(created)
 
 
@@ -206,6 +209,12 @@ def _handle_update_ticket(ai_result: dict[str, Any], tickets_client: TicketInter
     """Handle update_ticket intent."""
     ticket_id = ai_result.get("ticket_id")
     if not ticket_id:
+        return {}
+
+    # Check if ticket exists before attempting update
+    existing_ticket = tickets_client.get_ticket(ticket_id)
+    if not existing_ticket:
+        logger.warning("Ticket %s not found for update", ticket_id)
         return {}
 
     status = _parse_status(ai_result.get("status"))
@@ -217,6 +226,9 @@ def _handle_update_ticket(ai_result: dict[str, Any], tickets_client: TicketInter
     if title:
         kwargs["title"] = title
     updated = tickets_client.update_ticket(**kwargs)
+    if not updated:
+        logger.error("Failed to update ticket %s", ticket_id)
+        return {}
     return _serialize_ticket(updated)
 
 
@@ -248,6 +260,11 @@ def _handle_intent(
     if intent == "delete_ticket":
         ticket_id = ai_result.get("ticket_id")
         if ticket_id:
+            # Check if ticket exists before attempting deletion
+            existing_ticket = tickets_client.get_ticket(ticket_id)
+            if not existing_ticket:
+                logger.warning("Ticket %s not found for deletion", ticket_id)
+                return {"deleted": False, "ticket_id": ticket_id, "error": "Ticket not found"}
             success = tickets_client.delete_ticket(ticket_id)
             return {"deleted": success, "ticket_id": ticket_id}
 
