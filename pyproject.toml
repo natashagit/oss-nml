@@ -66,6 +66,11 @@ ignore = [
   "D213", # `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
   "S101", # Use of `assert` detected --> Asserts are good in our opinion. Tests use asserts profusely.
 ]
+# Test files are allowed to be less strict for pragmatic testing practices:
+# TRY300 (no else in try), BLE001 (catch Exception), ANN401 (Any type), SLF001 (private access),
+# E501 (line too long), S105/S106 (hardcoded passwords in tests), ARG001/ARG002/ARG005 (unused args for fixtures),
+# INP001 (implicit namespace package), PLC0415 (import outside top-level), D103 (missing docstring),
+# I001 (import order), PLR2004 (magic values in comparisons)
 per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415", "D103", "I001", "ARG005", "PLR2004"] }
 
 [tool.mypy]
