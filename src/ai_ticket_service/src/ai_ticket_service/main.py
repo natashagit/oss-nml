@@ -130,7 +130,7 @@ def command(request: CommandRequest) -> CommandResponse:
     """Process natural language into ticket operations with backend selection."""
     schema = {
         "name": "ticket_command",
-        "description": "Extract ticketing intent and relevant fields",
+        "description": "Extract ticketing intent and relevant fields. Use 'chat' for conversational queries or 'unknown' when intent is unclear.",
         "schema": {
             "type": "object",
             "properties": {
@@ -142,6 +142,8 @@ def command(request: CommandRequest) -> CommandResponse:
                         "search_tickets",
                         "update_ticket",
                         "delete_ticket",
+                        "chat",
+                        "unknown",
                     ],
                 },
                 "title": {"type": "string"},
@@ -149,8 +151,9 @@ def command(request: CommandRequest) -> CommandResponse:
                 "ticket_id": {"type": "string"},
                 "query": {"type": "string"},
                 "status": {"type": "string"},
+                "message": {"type": "string", "description": "Response message for chat or unknown intents"},
             },
-            "required": ["intent", "title", "description", "ticket_id", "query", "status"],
+            "required": ["intent"],
             "additionalProperties": False,
         },
     }
@@ -160,13 +163,25 @@ def command(request: CommandRequest) -> CommandResponse:
     ticket_result: dict[str, Any] | list[dict[str, Any]] | None = None
     backend_status = _get_backend_status(request.backend)
 
-    if isinstance(ai_result, dict) and backend_status == "success":
-        try:
-            tickets_client = TicketBackendFactory.create_backend(request.backend)
-            ticket_result = _handle_intent(ai_result, tickets_client)
-        except (ValueError, RuntimeError):
-            logger.exception("Failed to process ticket operation")
-            backend_status = "error"
+    if isinstance(ai_result, dict):
+        intent = ai_result.get("intent")
+
+        # Handle chat/unknown intents without needing backend
+        if intent in ("chat", "unknown"):
+            if intent == "chat":
+                message = ai_result.get("message", "I'm here to help with ticket operations.")
+                ticket_result = {"type": "chat", "message": message}
+            else:  # unknown
+                message = ai_result.get("message", "I'm not sure what you'd like me to do. Please specify a ticket operation.")
+                ticket_result = {"type": "unknown", "message": message}
+        elif backend_status == "success":
+            # Handle ticket operations only if backend is available
+            try:
+                tickets_client = TicketBackendFactory.create_backend(request.backend)
+                ticket_result = _handle_intent(ai_result, tickets_client)
+            except (ValueError, RuntimeError):
+                logger.exception("Failed to process ticket operation")
+                backend_status = "error"
 
     return CommandResponse(
         ai_result=ai_result,
@@ -267,6 +282,16 @@ def _handle_intent(
                 return {"deleted": False, "ticket_id": ticket_id, "error": "Ticket not found"}
             success = tickets_client.delete_ticket(ticket_id)
             return {"deleted": success, "ticket_id": ticket_id}
+
+    if intent == "chat":
+        # Handle conversational queries - no ticket operation needed
+        message = ai_result.get("message", "I'm here to help with ticket operations.")
+        return {"type": "chat", "message": message}
+
+    if intent == "unknown":
+        # Handle unclear intents - no ticket operation needed
+        message = ai_result.get("message", "I'm not sure what you'd like me to do. Please specify a ticket operation.")
+        return {"type": "unknown", "message": message}
 
     return None
 
