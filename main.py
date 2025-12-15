@@ -18,6 +18,15 @@ SYSTEM_PROMPT = "You route user requests into structured ticket commands."
 
 
 def _extract_id_from_item(item: object) -> str | None:
+    """Extract ticket ID from various object types (dict, object with to_dict, or additional_properties).
+
+    Args:
+        item: The object to extract the ID from (dict, object, or other)
+
+    Returns:
+        str | None: The extracted ticket ID as a string, or None if not found
+
+    """
     if isinstance(item, dict):
         tid = item.get("id")
         if tid:
@@ -35,6 +44,15 @@ def _extract_id_from_item(item: object) -> str | None:
 
 
 def _first_ticket_id(ticket_result: object) -> str | None:
+    """Find the first available ticket ID from a ticket result (single ticket, object, or list).
+
+    Args:
+        ticket_result: Result from ticket operation (dict, object, or list of tickets)
+
+    Returns:
+        str | None: The first found ticket ID, or None if no ID is available
+
+    """
     if isinstance(ticket_result, dict):
         return _extract_id_from_item(ticket_result)
     if hasattr(ticket_result, "to_dict") or hasattr(ticket_result, "additional_properties"):
@@ -48,6 +66,16 @@ def _first_ticket_id(ticket_result: object) -> str | None:
 
 
 def _call(adapter: TicketOrchestrationAdapter, user_input: str) -> dict[str, Any]:
+    """Call the ticket orchestration adapter with user input and print results.
+
+    Args:
+        adapter: The TicketOrchestrationAdapter instance to use
+        user_input: Natural language input from the user
+
+    Returns:
+        dict[str, Any]: Dictionary containing ai_result and ticket_result from the adapter
+
+    """
     backend = os.getenv("TICKET_BACKEND", "google_tasks")
     resp = adapter.raw_response(
         user_input=user_input,
