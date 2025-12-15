@@ -9,7 +9,13 @@ T = TypeVar("T", bound="CommandResponseTicketResultType1Item")
 
 @_attrs_define
 class CommandResponseTicketResultType1Item:
-    """ """
+    """Individual item in a ticket result list (Type 1 variant).
+
+    This class represents an individual item when ticket_result is a list in CommandResponse.
+    The ticket_result field is a union type that can be a single object (Type0), None, or a list (Type1).
+    Type1Item is used when the ticket operation returns multiple tickets (e.g., search results).
+
+    """
 
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 

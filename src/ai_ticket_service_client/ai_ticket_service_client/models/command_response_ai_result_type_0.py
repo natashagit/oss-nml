@@ -9,7 +9,13 @@ T = TypeVar("T", bound="CommandResponseAiResultType0")
 
 @_attrs_define
 class CommandResponseAiResultType0:
-    """ """
+    """AI result as a dictionary/object (Type 0 variant).
+
+    This class represents the dictionary variant of the ai_result field in CommandResponse.
+    The ai_result field is a union type that can be either a dict (Type0) or a string.
+    Type0 is used when the AI returns structured data as a dictionary.
+
+    """
 
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
