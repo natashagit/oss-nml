@@ -2,11 +2,14 @@
 
 import logging
 import os
+import uvicorn
 from typing import Any
 from uuid import uuid4
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from trello_client_impl.oauth import TrelloOAuthHandler  # type: ignore[import-untyped]
+from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # type: ignore[import-untyped]
 
 import openai_impl  # noqa: F401 - registers default AI implementation
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
@@ -58,14 +61,6 @@ class TicketBackendFactory:
             if not board_id:
                 msg = "TRELLO_BOARD_ID environment variable is required for Trello backend"
                 raise RuntimeError(msg)
-
-            # Import compatibility layer for their expected import structure
-            from trello_client_impl.oauth import TrelloOAuthHandler  # noqa: PLC0415  # type: ignore[import-untyped]
-            from trello_ticket_impl.trello_ticket_impl import (  # noqa: PLC0415
-                TrelloTicketClientImpl,  # type: ignore[import-untyped]
-            )
-
-            from ai_ticket_service import tickets_api_compat  # noqa: F401, PLC0415
 
             # Set default REDIRECT_URI if not provided (following their pattern)
             if not os.getenv("REDIRECT_URI"):
@@ -260,8 +255,6 @@ def _handle_intent(
 
 
 if __name__ == "__main__":  # pragma: no cover
-    import uvicorn
-
     uvicorn.run(
         "ai_ticket_service.main:app",
         host=os.getenv("HOST", "127.0.0.1"),
