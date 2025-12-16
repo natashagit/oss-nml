@@ -70,7 +70,7 @@ def test_generate_response_with_to_dict() -> None:
         def to_dict(self) -> dict[str, str]:
             return {"key": "value"}
 
-    mock_response = GenerateResponse(result=MockResultWithToDict())
+    mock_response = GenerateResponse(result=MockResultWithToDict())  # type: ignore[arg-type]
 
     with patch(
         "ai_adapter.client_impl.generate_generate_post.sync",
@@ -88,7 +88,7 @@ def test_generate_response_with_additional_properties() -> None:
     class MockResultWithProps:
         additional_properties = {"prop": "data"}
 
-    mock_response = GenerateResponse(result=MockResultWithProps())
+    mock_response = GenerateResponse(result=MockResultWithProps())  # type: ignore[arg-type]
 
     with patch(
         "ai_adapter.client_impl.generate_generate_post.sync",
@@ -103,7 +103,7 @@ def test_generate_response_with_dict() -> None:
     """Adapter handles dict result objects."""
     svc = ServiceClient(base_url="http://example.com")
 
-    mock_response = GenerateResponse(result={"direct": "dict"})
+    mock_response = GenerateResponse(result={"direct": "dict"})  # type: ignore[arg-type]
 
     with patch(
         "ai_adapter.client_impl.generate_generate_post.sync",
