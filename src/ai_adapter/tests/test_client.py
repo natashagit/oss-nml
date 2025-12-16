@@ -60,3 +60,55 @@ def test_register_sets_get_client() -> None:
     ai_adapter.register(base_url="http://example.com")
     client = ai_api.get_client()
     assert isinstance(client, ServiceClient)
+
+
+def test_generate_response_with_to_dict() -> None:
+    """Adapter handles result objects with to_dict method."""
+    svc = ServiceClient(base_url="http://example.com")
+
+    class MockResultWithToDict:
+        def to_dict(self) -> dict[str, str]:
+            return {"key": "value"}
+
+    mock_response = GenerateResponse(result=MockResultWithToDict())
+
+    with patch(
+        "ai_adapter.client_impl.generate_generate_post.sync",
+        return_value=mock_response,
+    ):
+        result = svc.generate_response("hi", "be short")
+
+    assert result == {"key": "value"}
+
+
+def test_generate_response_with_additional_properties() -> None:
+    """Adapter handles result objects with additional_properties."""
+    svc = ServiceClient(base_url="http://example.com")
+
+    class MockResultWithProps:
+        additional_properties = {"prop": "data"}
+
+    mock_response = GenerateResponse(result=MockResultWithProps())
+
+    with patch(
+        "ai_adapter.client_impl.generate_generate_post.sync",
+        return_value=mock_response,
+    ):
+        result = svc.generate_response("hi", "be short")
+
+    assert result == {"prop": "data"}
+
+
+def test_generate_response_with_dict() -> None:
+    """Adapter handles dict result objects."""
+    svc = ServiceClient(base_url="http://example.com")
+
+    mock_response = GenerateResponse(result={"direct": "dict"})
+
+    with patch(
+        "ai_adapter.client_impl.generate_generate_post.sync",
+        return_value=mock_response,
+    ):
+        result = svc.generate_response("hi", "be short")
+
+    assert result == {"direct": "dict"}
