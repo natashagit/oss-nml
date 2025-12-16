@@ -132,7 +132,9 @@ def command(request: CommandRequest) -> CommandResponse:
         "name": "ticket_command",
         "description": (
             "Extract ticketing intent and relevant fields. Use 'chat' for conversational queries "
-            "or 'unknown' when intent is unclear."
+            "or 'unknown' when intent is unclear. When the user asks to list or show tickets "
+            "(for example 'list all tickets', 'show my tickets'), set intent to 'search_tickets' "
+            "with query set to null. Only use 'get_ticket' when a specific ticket ID is present."
         ),
         "schema": {
             "type": "object",
@@ -149,14 +151,20 @@ def command(request: CommandRequest) -> CommandResponse:
                         "unknown",
                     ],
                 },
-                "title": {"type": "string"},
-                "description": {"type": "string"},
-                "ticket_id": {"type": "string"},
-                "query": {"type": "string"},
-                "status": {"type": "string"},
-                "message": {"type": "string", "description": "Response message for chat or unknown intents"},
+                "title": {"type": ["string", "null"]},
+                "description": {"type": ["string", "null"]},
+                "ticket_id": {"type": ["string", "null"]},
+                "query": {
+                    "type": ["string", "null"],
+                    "description": "Search term; set to null when returning every ticket.",
+                },
+                "status": {"type": ["string", "null"]},
+                "message": {
+                    "type": ["string", "null"],
+                    "description": "Response message for chat or unknown intents",
+                },
             },
-            "required": ["intent"],
+            "required": ["intent", "title", "description", "ticket_id", "query", "status", "message"],
             "additionalProperties": False,
         },
     }
