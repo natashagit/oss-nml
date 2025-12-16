@@ -1,7 +1,7 @@
 [project]
 name = "tickets-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Abstract interface definitions for ticketing systems, providing a uniform contract for ticket backend implementations"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []

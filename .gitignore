@@ -8,12 +8,16 @@ wheels/
 
 # Virtual environments
 .venv
+.python-version
 
 # Tooling Caches
 .mypy_cache/
+.dmypy.json
+dmypy.json
 .pytest_cache/
 .ruff_cache/
 .coverage
+coverage.xml
 
 # Build artifacts
 dist/
@@ -23,6 +27,9 @@ build/
 # IDE files
 .vscode/
 .idea/
+
+# macOS files
+.DS_Store
 
 # MkDocs build artifacts
 site/

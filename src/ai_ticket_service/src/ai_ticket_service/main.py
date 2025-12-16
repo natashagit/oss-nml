@@ -1,12 +1,16 @@
 """FastAPI service that orchestrates AI intent extraction and ticket creation."""
 
+import json
 import logging
 import os
 from typing import Any
 from uuid import uuid4
 
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from trello_client_impl.oauth import TrelloOAuthHandler  # type: ignore[import-untyped]
+from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # type: ignore[import-untyped]
 
 import openai_impl  # noqa: F401 - registers default AI implementation
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
@@ -23,6 +27,13 @@ app = FastAPI(
 
 load_dotenv()
 logger = logging.getLogger(__name__)
+FORMAT_RESPONSE_PROMPT = (
+    "You are a helpful ticket assistant. Format ticket data into clear text for the user. "
+    "Use numbered sections like 'Ticket 1:' followed by Title, Description, Status, "
+    "and Assignee (if provided). For single-ticket responses, still mention the ticket "
+    "label and summarize succinctly. If there are no tickets or the request failed, "
+    "politely explain the situation. Do not invent information; rely only on provided JSON."
+)
 
 
 class TicketBackendFactory:
@@ -58,14 +69,6 @@ class TicketBackendFactory:
             if not board_id:
                 msg = "TRELLO_BOARD_ID environment variable is required for Trello backend"
                 raise RuntimeError(msg)
-
-            # Import compatibility layer for their expected import structure
-            from trello_client_impl.oauth import TrelloOAuthHandler  # noqa: PLC0415  # type: ignore[import-untyped]
-            from trello_ticket_impl.trello_ticket_impl import (  # noqa: PLC0415
-                TrelloTicketClientImpl,  # type: ignore[import-untyped]
-            )
-
-            from ai_ticket_service import tickets_api_compat  # noqa: F401, PLC0415
 
             # Set default REDIRECT_URI if not provided (following their pattern)
             if not os.getenv("REDIRECT_URI"):
@@ -107,13 +110,57 @@ def _serialize_ticket(ticket: Ticket) -> dict[str, Any]:
     }
 
 
-def _ai_generate(request: CommandRequest, schema_override: dict[str, Any]) -> str | dict[str, Any]:
-    """Call AI with enforced schema to extract ticket command."""
+def _format_ticket_response(
+    client: AIInterface,
+    original_user_input: str,
+    ticket_payload: dict[str, Any] | list[dict[str, Any]] | None,
+) -> str | None:
+    """Format ticket results via AI for user-facing response."""
+    if ticket_payload is None:
+        return None
+
+    try:
+        payload = json.dumps(ticket_payload, default=str)
+    except (TypeError, ValueError):
+        payload = str(ticket_payload)
+
+    user_prompt = (
+        "Original user request:\n"
+        f"{original_user_input}\n\n"
+        "Ticket data (JSON):\n"
+        f"{payload}\n\n"
+        "Please produce the formatted response."
+    )
+
+    try:
+        response = client.generate_response(
+            user_input=user_prompt,
+            system_prompt=FORMAT_RESPONSE_PROMPT,
+        )
+    except Exception:
+        logger.exception("Failed to format ticket response via AI")
+        return None
+
+    if isinstance(response, str):
+        return response
+    return json.dumps(response)
+
+
+def _get_ai_client() -> AIInterface:
+    """Return configured AI client or raise HTTPException."""
     try:
         client: AIInterface = get_client()  # type: ignore[assignment]
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"Failed to load AI client: {exc!s}") from exc
+    return client
 
+
+def _ai_generate(
+    client: AIInterface,
+    request: CommandRequest,
+    schema_override: dict[str, Any],
+) -> str | dict[str, Any]:
+    """Call AI with enforced schema to extract ticket command."""
     try:
         return client.generate_response(
             user_input=request.user_input,
@@ -135,7 +182,12 @@ def command(request: CommandRequest) -> CommandResponse:
     """Process natural language into ticket operations with backend selection."""
     schema = {
         "name": "ticket_command",
-        "description": "Extract ticketing intent and relevant fields",
+        "description": (
+            "Extract ticketing intent and relevant fields. Use 'chat' for conversational queries "
+            "or 'unknown' when intent is unclear. When the user asks to list or show tickets "
+            "(for example 'list all tickets', 'show my tickets'), set intent to 'search_tickets' "
+            "with query set to null. Only use 'get_ticket' when a specific ticket ID is present."
+        ),
         "schema": {
             "type": "object",
             "properties": {
@@ -147,37 +199,67 @@ def command(request: CommandRequest) -> CommandResponse:
                         "search_tickets",
                         "update_ticket",
                         "delete_ticket",
+                        "chat",
+                        "unknown",
                     ],
                 },
-                "title": {"type": "string"},
-                "description": {"type": "string"},
-                "ticket_id": {"type": "string"},
-                "query": {"type": "string"},
-                "status": {"type": "string"},
+                "title": {"type": ["string", "null"]},
+                "description": {"type": ["string", "null"]},
+                "ticket_id": {"type": ["string", "null"]},
+                "query": {
+                    "type": ["string", "null"],
+                    "description": "Search term; set to null when returning every ticket.",
+                },
+                "status": {"type": ["string", "null"]},
+                "message": {
+                    "type": ["string", "null"],
+                    "description": "Response message for chat or unknown intents",
+                },
             },
-            "required": ["intent", "title", "description", "ticket_id", "query", "status"],
+            "required": ["intent", "title", "description", "ticket_id", "query", "status", "message"],
             "additionalProperties": False,
         },
     }
 
-    ai_result = _ai_generate(request, schema_override=schema)
+    ai_client = _get_ai_client()
+    ai_result = _ai_generate(ai_client, request, schema_override=schema)
 
     ticket_result: dict[str, Any] | list[dict[str, Any]] | None = None
     backend_status = _get_backend_status(request.backend)
+    formatted_response: str | None = None
 
-    if isinstance(ai_result, dict) and backend_status == "success":
-        try:
-            tickets_client = TicketBackendFactory.create_backend(request.backend)
-            ticket_result = _handle_intent(ai_result, tickets_client)
-        except (ValueError, RuntimeError):
-            logger.exception("Failed to process ticket operation")
-            backend_status = "error"
+    if isinstance(ai_result, dict):
+        intent = ai_result.get("intent")
+
+        # Handle chat/unknown intents without needing backend
+        if intent in ("chat", "unknown"):
+            if intent == "chat":
+                message = ai_result.get("message", "I'm here to help with ticket operations.")
+                ticket_result = {"type": "chat", "message": message}
+            else:  # unknown
+                message = ai_result.get("message", "I'm not sure what you'd like me to do. Please specify a ticket operation.")
+                ticket_result = {"type": "unknown", "message": message}
+        elif backend_status == "success":
+            # Handle ticket operations only if backend is available
+            try:
+                tickets_client = TicketBackendFactory.create_backend(request.backend)
+                ticket_result = _handle_intent(ai_result, tickets_client)
+                if ticket_result is not None:
+                    formatted_response = _format_ticket_response(
+                        ai_client,
+                        original_user_input=request.user_input,
+                        ticket_payload=ticket_result,
+                    )
+            except (ValueError, RuntimeError):
+                logger.exception("Failed to process ticket operation")
+                backend_status = "error"
 
     return CommandResponse(
         ai_result=ai_result,
         ticket_result=ticket_result,
         backend_used=request.backend,
         backend_status=backend_status,
+        formatted_response=formatted_response,
     )
 
 
@@ -204,6 +286,9 @@ def _handle_create_ticket(ai_result: dict[str, Any], tickets_client: TicketInter
     title = ai_result.get("title", f"AI Ticket {uuid4()}")
     description = ai_result.get("description", "")
     created = tickets_client.create_ticket(title=title, description=description)
+    if not created:
+        logger.error("Failed to create ticket with title: %s", title)
+        return {}
     return _serialize_ticket(created)
 
 
@@ -211,6 +296,12 @@ def _handle_update_ticket(ai_result: dict[str, Any], tickets_client: TicketInter
     """Handle update_ticket intent."""
     ticket_id = ai_result.get("ticket_id")
     if not ticket_id:
+        return {}
+
+    # Check if ticket exists before attempting update
+    existing_ticket = tickets_client.get_ticket(ticket_id)
+    if not existing_ticket:
+        logger.warning("Ticket %s not found for update", ticket_id)
         return {}
 
     status = _parse_status(ai_result.get("status"))
@@ -222,7 +313,57 @@ def _handle_update_ticket(ai_result: dict[str, Any], tickets_client: TicketInter
     if title:
         kwargs["title"] = title
     updated = tickets_client.update_ticket(**kwargs)
+    if not updated:
+        logger.error("Failed to update ticket %s", ticket_id)
+        return {}
     return _serialize_ticket(updated)
+
+
+def _handle_get_ticket(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, Any] | None:
+    """Handle get_ticket intent."""
+    ticket_id = ai_result.get("ticket_id")
+    if ticket_id:
+        found = tickets_client.get_ticket(ticket_id)
+        return _serialize_ticket(found) if found else None
+    return None
+
+
+def _handle_search_tickets(ai_result: dict[str, Any], tickets_client: TicketInterface) -> list[dict[str, Any]]:
+    """Handle search_tickets intent."""
+    raw_query = ai_result.get("query")
+    query = raw_query if isinstance(raw_query, str) and raw_query.strip() else None
+    status = _parse_status(ai_result.get("status"))
+    matches = tickets_client.search_tickets(query=query, status=status)
+    return [_serialize_ticket(ticket) for ticket in matches]
+
+
+def _handle_delete_ticket(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, Any] | None:
+    """Handle delete_ticket intent."""
+    ticket_id = ai_result.get("ticket_id")
+    if not ticket_id:
+        return None
+    # Check if ticket exists before attempting deletion
+    existing_ticket = tickets_client.get_ticket(ticket_id)
+    if not existing_ticket:
+        logger.warning("Ticket %s not found for deletion", ticket_id)
+        return {"deleted": False, "ticket_id": ticket_id, "error": "Ticket not found"}
+    success = tickets_client.delete_ticket(ticket_id)
+    return {"deleted": success, "ticket_id": ticket_id}
+
+
+def _handle_chat(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, str]:  # noqa: ARG001
+    """Handle chat intent."""
+    message = ai_result.get("message", "I'm here to help with ticket operations.")
+    return {"type": "chat", "message": message}
+
+
+def _handle_unknown(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, str]:  # noqa: ARG001
+    """Handle unknown intent."""
+    message = ai_result.get(
+        "message",
+        "I'm not sure what you'd like me to do. Please specify a ticket operation.",
+    )
+    return {"type": "unknown", "message": message}
 
 
 def _handle_intent(
@@ -231,37 +372,25 @@ def _handle_intent(
 ) -> dict[str, Any] | list[dict[str, Any]] | None:
     intent = ai_result.get("intent")
 
-    if intent == "create_ticket":
-        return _handle_create_ticket(ai_result, tickets_client)
+    # Dispatch table for intent handlers
+    handlers = {
+        "create_ticket": _handle_create_ticket,
+        "get_ticket": _handle_get_ticket,
+        "search_tickets": _handle_search_tickets,
+        "update_ticket": _handle_update_ticket,
+        "delete_ticket": _handle_delete_ticket,
+        "chat": _handle_chat,
+        "unknown": _handle_unknown,
+    }
 
-    if intent == "get_ticket":
-        ticket_id = ai_result.get("ticket_id")
-        if ticket_id:
-            found = tickets_client.get_ticket(ticket_id)
-            return _serialize_ticket(found) if found else None
+    if not isinstance(intent, str):
+        return None
 
-    if intent == "search_tickets":
-        raw_query = ai_result.get("query")
-        query = raw_query if isinstance(raw_query, str) and raw_query.strip() else None
-        status = _parse_status(ai_result.get("status"))
-        matches = tickets_client.search_tickets(query=query, status=status)
-        return [_serialize_ticket(ticket) for ticket in matches]
-
-    if intent == "update_ticket":
-        return _handle_update_ticket(ai_result, tickets_client)
-
-    if intent == "delete_ticket":
-        ticket_id = ai_result.get("ticket_id")
-        if ticket_id:
-            success = tickets_client.delete_ticket(ticket_id)
-            return {"deleted": success, "ticket_id": ticket_id}
-
-    return None
+    handler = handlers.get(intent)
+    return handler(ai_result, tickets_client) if handler else None
 
 
 if __name__ == "__main__":  # pragma: no cover
-    import uvicorn
-
     uvicorn.run(
         "ai_ticket_service.main:app",
         host=os.getenv("HOST", "127.0.0.1"),

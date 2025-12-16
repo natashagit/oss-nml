@@ -9,7 +9,13 @@ T = TypeVar("T", bound="CommandResponseTicketResultType0")
 
 @_attrs_define
 class CommandResponseTicketResultType0:
-    """ """
+    """Ticket result as a single object (Type 0 variant).
+
+    This class represents the single object variant of the ticket_result field in CommandResponse.
+    The ticket_result field is a union type that can be a single object (Type0), None, or a list (Type1).
+    Type0 is used when the ticket operation returns a single ticket object (e.g., get, create, update).
+
+    """
 
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
