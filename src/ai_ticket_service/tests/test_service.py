@@ -9,10 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ai_ticket_service.main import app
+from ai_api import AIInterface
 from tickets_api import TicketStatus
 
 
-class _FakeAIClient:
+class _FakeAIClient(AIInterface):
     def __init__(self, responses: list[Any] | dict[str, Any] | str) -> None:
         if isinstance(responses, list):
             self._responses = responses
@@ -544,8 +545,9 @@ def test_format_ticket_response_handles_ai_exception() -> None:
     """_format_ticket_response should return None when AI call fails."""
     from ai_ticket_service.main import _format_ticket_response
 
-    class RaisingAI:
-        def generate_response(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401, ANN001
-            raise RuntimeError("boom")
+    class RaisingAI(AIInterface):
+        def generate_response(self, *args: Any, **kwargs: Any) -> Any:
+            msg = "boom"
+            raise RuntimeError(msg)
 
     assert _format_ticket_response(RaisingAI(), "request", {"id": "123"}) is None

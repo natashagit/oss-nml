@@ -161,7 +161,6 @@ def _ai_generate(
     schema_override: dict[str, Any],
 ) -> str | dict[str, Any]:
     """Call AI with enforced schema to extract ticket command."""
-
     try:
         return client.generate_response(
             user_input=request.user_input,
@@ -361,7 +360,8 @@ def _handle_chat(ai_result: dict[str, Any], tickets_client: TicketInterface) -> 
 def _handle_unknown(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, str]:  # noqa: ARG001
     """Handle unknown intent."""
     message = ai_result.get(
-        "message", "I'm not sure what you'd like me to do. Please specify a ticket operation.",
+        "message",
+        "I'm not sure what you'd like me to do. Please specify a ticket operation.",
     )
     return {"type": "unknown", "message": message}
 
