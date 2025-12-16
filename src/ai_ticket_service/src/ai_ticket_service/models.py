@@ -25,3 +25,4 @@ class CommandResponse(BaseModel):
     ticket_result: dict[str, object] | list[dict[str, object]] | None
     backend_used: str
     backend_status: str
+    formatted_response: str | None = None

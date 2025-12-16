@@ -13,11 +13,20 @@ from tickets_api import TicketStatus
 
 
 class _FakeAIClient:
-    def __init__(self, result: dict[str, Any]) -> None:
-        self._result = result
+    def __init__(self, responses: list[Any] | dict[str, Any] | str) -> None:
+        if isinstance(responses, list):
+            self._responses = responses
+        else:
+            self._responses = [responses]
+        self._idx = 0
 
-    def generate_response(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return self._result
+    def generate_response(self, *args: Any, **kwargs: Any) -> Any:
+        result = self._responses[min(self._idx, len(self._responses) - 1)]
+        self._idx += 1
+        return result
+
+
+DEFAULT_FORMATTED_RESPONSE = "Ticket 1: Example formatted output."
 
 
 class _FakeTicketsClient:
@@ -65,14 +74,17 @@ def client() -> TestClient:
 
 def test_command_create(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
     fake_ai = _FakeAIClient(
-        {
-            "intent": "create_ticket",
-            "title": "New Ticket",
-            "description": "Body",
-            "ticket_id": "",
-            "query": "",
-            "status": "",
-        },
+        [
+            {
+                "intent": "create_ticket",
+                "title": "New Ticket",
+                "description": "Body",
+                "ticket_id": "",
+                "query": "",
+                "status": "",
+            },
+            DEFAULT_FORMATTED_RESPONSE,
+        ],
     )
     fake_tickets = _FakeTicketsClient()
 
@@ -94,18 +106,22 @@ def test_command_create(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> 
     assert data["ticket_result"]["title"] == "New Ticket"
     assert data["backend_used"] == "google_tasks"
     assert data["backend_status"] == "success"
+    assert data["formatted_response"] == DEFAULT_FORMATTED_RESPONSE
 
 
 def test_command_search(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
     fake_ai = _FakeAIClient(
-        {
-            "intent": "search_tickets",
-            "title": "",
-            "description": "",
-            "ticket_id": "",
-            "query": "all",
-            "status": "",
-        },
+        [
+            {
+                "intent": "search_tickets",
+                "title": "",
+                "description": "",
+                "ticket_id": "",
+                "query": "all",
+                "status": "",
+            },
+            DEFAULT_FORMATTED_RESPONSE,
+        ],
     )
     fake_tickets = _FakeTicketsClient()
 
@@ -127,18 +143,22 @@ def test_command_search(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> 
     assert data["ticket_result"][0]["id"] == "tid-123"
     assert data["backend_used"] == "google_tasks"
     assert data["backend_status"] == "success"
+    assert data["formatted_response"] == DEFAULT_FORMATTED_RESPONSE
 
 
 def test_command_get(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
     fake_ai = _FakeAIClient(
-        {
-            "intent": "get_ticket",
-            "title": "",
-            "description": "",
-            "ticket_id": "tid-123",
-            "query": "",
-            "status": "",
-        },
+        [
+            {
+                "intent": "get_ticket",
+                "title": "",
+                "description": "",
+                "ticket_id": "tid-123",
+                "query": "",
+                "status": "",
+            },
+            DEFAULT_FORMATTED_RESPONSE,
+        ],
     )
     fake_tickets = _FakeTicketsClient()
 
@@ -159,18 +179,22 @@ def test_command_get(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> Non
     assert data["ticket_result"]["id"] == "tid-123"
     assert data["backend_used"] == "google_tasks"
     assert data["backend_status"] == "success"
+    assert data["formatted_response"] == DEFAULT_FORMATTED_RESPONSE
 
 
 def test_command_update(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
     fake_ai = _FakeAIClient(
-        {
-            "intent": "update_ticket",
-            "title": "Updated",
-            "description": "",
-            "ticket_id": "tid-123",
-            "query": "",
-            "status": "closed",
-        },
+        [
+            {
+                "intent": "update_ticket",
+                "title": "Updated",
+                "description": "",
+                "ticket_id": "tid-123",
+                "query": "",
+                "status": "closed",
+            },
+            DEFAULT_FORMATTED_RESPONSE,
+        ],
     )
     fake_tickets = _FakeTicketsClient()
 
@@ -192,18 +216,22 @@ def test_command_update(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> 
     # Note: Status update depends on proper status parsing, title update is the main test
     assert data["backend_used"] == "google_tasks"
     assert data["backend_status"] == "success"
+    assert data["formatted_response"] == DEFAULT_FORMATTED_RESPONSE
 
 
 def test_command_delete(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
     fake_ai = _FakeAIClient(
-        {
-            "intent": "delete_ticket",
-            "title": "",
-            "description": "",
-            "ticket_id": "tid-123",
-            "query": "",
-            "status": "",
-        },
+        [
+            {
+                "intent": "delete_ticket",
+                "title": "",
+                "description": "",
+                "ticket_id": "tid-123",
+                "query": "",
+                "status": "",
+            },
+            DEFAULT_FORMATTED_RESPONSE,
+        ],
     )
     fake_tickets = _FakeTicketsClient()
 
@@ -224,6 +252,7 @@ def test_command_delete(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> 
     assert data["ticket_result"]["deleted"] is True
     assert data["backend_used"] == "google_tasks"
     assert data["backend_status"] == "success"
+    assert data["formatted_response"] == DEFAULT_FORMATTED_RESPONSE
 
 
 def test_health_endpoint(client: TestClient) -> None:
@@ -326,6 +355,7 @@ def test_command_with_trello_backend_not_configured(monkeypatch: pytest.MonkeyPa
     assert data["backend_used"] == "trello"
     assert data["backend_status"] == "not_configured"
     assert data["ticket_result"] is None
+    assert data["formatted_response"] is None
 
 
 def test_command_with_backend_error(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
@@ -365,6 +395,7 @@ def test_command_with_backend_error(monkeypatch: pytest.MonkeyPatch, client: Tes
     assert data["backend_used"] == "google_tasks"
     assert data["backend_status"] == "error"
     assert data["ticket_result"] is None
+    assert data["formatted_response"] is None
 
 
 def test_handle_create_ticket() -> None:
@@ -489,3 +520,32 @@ def test_backend_factory_trello_success(monkeypatch: pytest.MonkeyPatch) -> None
     backend = TicketBackendFactory.create_backend("trello")
     assert backend is not None
     assert isinstance(backend, MockTrelloClient)
+
+
+def test_format_ticket_response_none_payload() -> None:
+    """_format_ticket_response should return None when no ticket payload provided."""
+    from ai_ticket_service.main import _format_ticket_response
+
+    client = _FakeAIClient("unused")
+    assert _format_ticket_response(client, "request text", None) is None
+
+
+def test_format_ticket_response_unserializable_payload() -> None:
+    """_format_ticket_response should fall back to string serialization."""
+    from ai_ticket_service.main import _format_ticket_response
+
+    client = _FakeAIClient("Formatted output")
+    payload = {"data": {1, 2, 3}}  # sets are not JSON serializable
+    result = _format_ticket_response(client, "request", payload)
+    assert result == "Formatted output"
+
+
+def test_format_ticket_response_handles_ai_exception() -> None:
+    """_format_ticket_response should return None when AI call fails."""
+    from ai_ticket_service.main import _format_ticket_response
+
+    class RaisingAI:
+        def generate_response(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401, ANN001
+            raise RuntimeError("boom")
+
+    assert _format_ticket_response(RaisingAI(), "request", {"id": "123"}) is None

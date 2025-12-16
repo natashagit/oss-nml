@@ -13,11 +13,11 @@ from tickets_api import TicketStatus
 
 
 class _FakeAI:
-    def __init__(self, responses: list[dict[str, Any]]) -> None:
+    def __init__(self, responses: list[Any]) -> None:
         self._responses = responses
         self._idx = 0
 
-    def generate_response(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    def generate_response(self, *args: Any, **kwargs: Any) -> Any:
         del args, kwargs
         result = self._responses[self._idx]
         # cycle through provided responses
@@ -76,10 +76,12 @@ def test_create_and_get_flow(monkeypatch: pytest.MonkeyPatch, client: TestClient
                 "title": "New Ticket",
                 "description": "New Desc",
             },
+            "Ticket 1: Created New Ticket.",
             {
                 "intent": "get_ticket",
                 "ticket_id": "tid-xyz",
             },
+            "Ticket 1: Retrieved tid-xyz.",
         ],
     )
     fake_tickets = _FakeTickets()
@@ -96,6 +98,7 @@ def test_create_and_get_flow(monkeypatch: pytest.MonkeyPatch, client: TestClient
     data = create_resp.json()
     assert data["ticket_result"]["id"] == "tid-xyz"
     assert data["ticket_result"]["title"] == "New Ticket"
+    assert data["formatted_response"] == "Ticket 1: Created New Ticket."
 
     # Get
     get_resp = client.post(
@@ -105,6 +108,7 @@ def test_create_and_get_flow(monkeypatch: pytest.MonkeyPatch, client: TestClient
     assert get_resp.status_code == 200
     get_data = get_resp.json()
     assert get_data["ticket_result"]["id"] == "tid-xyz"
+    assert get_data["formatted_response"] == "Ticket 1: Retrieved tid-xyz."
 
 
 def test_update_and_delete_flow(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
@@ -116,10 +120,12 @@ def test_update_and_delete_flow(monkeypatch: pytest.MonkeyPatch, client: TestCli
                 "title": "Updated",
                 "status": "closed",
             },
+            "Ticket 1: Updated",
             {
                 "intent": "delete_ticket",
                 "ticket_id": "tid-xyz",
             },
+            "Ticket 1: Deleted",
         ],
     )
     fake_tickets = _FakeTickets()
@@ -136,6 +142,7 @@ def test_update_and_delete_flow(monkeypatch: pytest.MonkeyPatch, client: TestCli
     upd_data = upd_resp.json()
     assert upd_data["ticket_result"]["title"] == "Updated"
     assert upd_data["ticket_result"]["status"] == "closed"
+    assert upd_data["formatted_response"] == "Ticket 1: Updated"
 
     # Delete
     del_resp = client.post(
@@ -145,3 +152,4 @@ def test_update_and_delete_flow(monkeypatch: pytest.MonkeyPatch, client: TestCli
     assert del_resp.status_code == 200
     del_data = del_resp.json()
     assert del_data["ticket_result"]["deleted"] is True
+    assert del_data["formatted_response"] == "Ticket 1: Deleted"

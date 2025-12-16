@@ -1,5 +1,6 @@
 """FastAPI service that orchestrates AI intent extraction and ticket creation."""
 
+import json
 import logging
 import os
 from typing import Any
@@ -26,6 +27,13 @@ app = FastAPI(
 
 load_dotenv()
 logger = logging.getLogger(__name__)
+FORMAT_RESPONSE_PROMPT = (
+    "You are a helpful ticket assistant. Format ticket data into clear text for the user. "
+    "Use numbered sections like 'Ticket 1:' followed by Title, Description, Status, "
+    "and Assignee (if provided). For single-ticket responses, still mention the ticket "
+    "label and summarize succinctly. If there are no tickets or the request failed, "
+    "politely explain the situation. Do not invent information; rely only on provided JSON."
+)
 
 
 class TicketBackendFactory:
@@ -102,12 +110,57 @@ def _serialize_ticket(ticket: Ticket) -> dict[str, Any]:
     }
 
 
-def _ai_generate(request: CommandRequest, schema_override: dict[str, Any]) -> str | dict[str, Any]:
-    """Call AI with enforced schema to extract ticket command."""
+def _format_ticket_response(
+    client: AIInterface,
+    original_user_input: str,
+    ticket_payload: dict[str, Any] | list[dict[str, Any]] | None,
+) -> str | None:
+    """Format ticket results via AI for user-facing response."""
+    if ticket_payload is None:
+        return None
+
+    try:
+        payload = json.dumps(ticket_payload, default=str)
+    except (TypeError, ValueError):
+        payload = str(ticket_payload)
+
+    user_prompt = (
+        "Original user request:\n"
+        f"{original_user_input}\n\n"
+        "Ticket data (JSON):\n"
+        f"{payload}\n\n"
+        "Please produce the formatted response."
+    )
+
+    try:
+        response = client.generate_response(
+            user_input=user_prompt,
+            system_prompt=FORMAT_RESPONSE_PROMPT,
+        )
+    except Exception:
+        logger.exception("Failed to format ticket response via AI")
+        return None
+
+    if isinstance(response, str):
+        return response
+    return json.dumps(response)
+
+
+def _get_ai_client() -> AIInterface:
+    """Return configured AI client or raise HTTPException."""
     try:
         client: AIInterface = get_client()  # type: ignore[assignment]
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"Failed to load AI client: {exc!s}") from exc
+    return client
+
+
+def _ai_generate(
+    client: AIInterface,
+    request: CommandRequest,
+    schema_override: dict[str, Any],
+) -> str | dict[str, Any]:
+    """Call AI with enforced schema to extract ticket command."""
 
     try:
         return client.generate_response(
@@ -169,10 +222,12 @@ def command(request: CommandRequest) -> CommandResponse:
         },
     }
 
-    ai_result = _ai_generate(request, schema_override=schema)
+    ai_client = _get_ai_client()
+    ai_result = _ai_generate(ai_client, request, schema_override=schema)
 
     ticket_result: dict[str, Any] | list[dict[str, Any]] | None = None
     backend_status = _get_backend_status(request.backend)
+    formatted_response: str | None = None
 
     if isinstance(ai_result, dict):
         intent = ai_result.get("intent")
@@ -190,6 +245,12 @@ def command(request: CommandRequest) -> CommandResponse:
             try:
                 tickets_client = TicketBackendFactory.create_backend(request.backend)
                 ticket_result = _handle_intent(ai_result, tickets_client)
+                if ticket_result is not None:
+                    formatted_response = _format_ticket_response(
+                        ai_client,
+                        original_user_input=request.user_input,
+                        ticket_payload=ticket_result,
+                    )
             except (ValueError, RuntimeError):
                 logger.exception("Failed to process ticket operation")
                 backend_status = "error"
@@ -199,6 +260,7 @@ def command(request: CommandRequest) -> CommandResponse:
         ticket_result=ticket_result,
         backend_used=request.backend,
         backend_status=backend_status,
+        formatted_response=formatted_response,
     )
 
 
