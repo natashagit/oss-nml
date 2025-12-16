@@ -313,6 +313,9 @@ def _handle_intent(
         "unknown": _handle_unknown,
     }
 
+    if not isinstance(intent, str):
+        return None
+
     handler = handlers.get(intent)
     return handler(ai_result, tickets_client) if handler else None
 
