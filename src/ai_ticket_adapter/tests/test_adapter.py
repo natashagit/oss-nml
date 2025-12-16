@@ -41,3 +41,32 @@ def test_raw_response_raises_on_none(monkeypatch: pytest.MonkeyPatch) -> None:
     adapter = TicketOrchestrationAdapter(base_url="http://test")
     with pytest.raises(RuntimeError):
         adapter.raw_response("hi", system_prompt="prompt")
+
+
+def test_raw_response_returns_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    expected = CommandResponse.from_dict(
+        {
+            "ai_result": {"intent": "create_ticket"},
+            "ticket_result": {"id": "2"},
+            "backend_used": "google_tasks",
+            "backend_status": "success",
+        },
+    )
+
+    def fake_sync(*args: object, **kwargs: object) -> CommandResponse:
+        del args, kwargs
+        return expected
+
+    monkeypatch.setattr(
+        "ai_ticket_adapter.client_impl.sync",
+        fake_sync,
+    )
+
+    adapter = TicketOrchestrationAdapter(base_url="http://test")
+    result = adapter.raw_response("hi", system_prompt="prompt")
+    assert result == expected
+
+
+def test_base_url_property() -> None:
+    adapter = TicketOrchestrationAdapter(base_url="http://myservice.com")
+    assert adapter.base_url == "http://myservice.com"
