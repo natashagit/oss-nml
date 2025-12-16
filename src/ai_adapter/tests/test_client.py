@@ -1,5 +1,6 @@
 """Unit tests for the AI adapter."""
 
+from typing import ClassVar
 from unittest.mock import patch
 
 import pytest
@@ -86,7 +87,7 @@ def test_generate_response_with_additional_properties() -> None:
     svc = ServiceClient(base_url="http://example.com")
 
     class MockResultWithProps:
-        additional_properties = {"prop": "data"}
+        additional_properties: ClassVar[dict[str, str]] = {"prop": "data"}
 
     mock_response = GenerateResponse(result=MockResultWithProps())  # type: ignore[arg-type]
 

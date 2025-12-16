@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 
 import httpx
-
 from ai_ticket_service_client.api.default.command_command_post import sync
 from ai_ticket_service_client.models import CommandRequest, CommandResponse
 from ai_ticket_service_client.types import UNSET
@@ -42,22 +41,22 @@ class TicketOrchestrationAdapter:
         )
         try:
             response = sync(client=self._client, body=request)
-        except httpx.TimeoutException as exc:
-            logger.error("Request to %s timed out: %s", self._client._base_url, exc)  # noqa: SLF001
+        except httpx.TimeoutException:
+            logger.exception("Request to %s timed out", self._client._base_url)  # noqa: SLF001
             raise
-        except httpx.ConnectError as exc:
-            logger.error("Failed to connect to %s: %s", self._client._base_url, exc)  # noqa: SLF001
+        except httpx.ConnectError:
+            logger.exception("Failed to connect to %s", self._client._base_url)  # noqa: SLF001
             raise
         except httpx.HTTPStatusError as exc:
-            logger.error(
+            logger.exception(
                 "HTTP error %s from %s: %s",
                 exc.response.status_code,
                 self._client._base_url,  # noqa: SLF001
                 exc.response.text,
             )
             raise
-        except httpx.HTTPError as exc:
-            logger.error("Network/HTTP error when calling %s: %s", self._client._base_url, exc)  # noqa: SLF001
+        except httpx.HTTPError:
+            logger.exception("Network/HTTP error when calling %s", self._client._base_url)  # noqa: SLF001
             raise
         except Exception as exc:
             logger.exception("Unexpected error when calling AI ticket service at %s", self._client._base_url)  # noqa: SLF001

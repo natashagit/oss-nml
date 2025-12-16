@@ -2,10 +2,10 @@
 
 import logging
 import os
-import uvicorn
 from typing import Any
 from uuid import uuid4
 
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from trello_client_impl.oauth import TrelloOAuthHandler  # type: ignore[import-untyped]
@@ -130,7 +130,10 @@ def command(request: CommandRequest) -> CommandResponse:
     """Process natural language into ticket operations with backend selection."""
     schema = {
         "name": "ticket_command",
-        "description": "Extract ticketing intent and relevant fields. Use 'chat' for conversational queries or 'unknown' when intent is unclear.",
+        "description": (
+            "Extract ticketing intent and relevant fields. Use 'chat' for conversational queries "
+            "or 'unknown' when intent is unclear."
+        ),
         "schema": {
             "type": "object",
             "properties": {
@@ -247,53 +250,71 @@ def _handle_update_ticket(ai_result: dict[str, Any], tickets_client: TicketInter
     return _serialize_ticket(updated)
 
 
+def _handle_get_ticket(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, Any] | None:
+    """Handle get_ticket intent."""
+    ticket_id = ai_result.get("ticket_id")
+    if ticket_id:
+        found = tickets_client.get_ticket(ticket_id)
+        return _serialize_ticket(found) if found else None
+    return None
+
+
+def _handle_search_tickets(ai_result: dict[str, Any], tickets_client: TicketInterface) -> list[dict[str, Any]]:
+    """Handle search_tickets intent."""
+    raw_query = ai_result.get("query")
+    query = raw_query if isinstance(raw_query, str) and raw_query.strip() else None
+    status = _parse_status(ai_result.get("status"))
+    matches = tickets_client.search_tickets(query=query, status=status)
+    return [_serialize_ticket(ticket) for ticket in matches]
+
+
+def _handle_delete_ticket(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, Any] | None:
+    """Handle delete_ticket intent."""
+    ticket_id = ai_result.get("ticket_id")
+    if not ticket_id:
+        return None
+    # Check if ticket exists before attempting deletion
+    existing_ticket = tickets_client.get_ticket(ticket_id)
+    if not existing_ticket:
+        logger.warning("Ticket %s not found for deletion", ticket_id)
+        return {"deleted": False, "ticket_id": ticket_id, "error": "Ticket not found"}
+    success = tickets_client.delete_ticket(ticket_id)
+    return {"deleted": success, "ticket_id": ticket_id}
+
+
+def _handle_chat(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, str]:  # noqa: ARG001
+    """Handle chat intent."""
+    message = ai_result.get("message", "I'm here to help with ticket operations.")
+    return {"type": "chat", "message": message}
+
+
+def _handle_unknown(ai_result: dict[str, Any], tickets_client: TicketInterface) -> dict[str, str]:  # noqa: ARG001
+    """Handle unknown intent."""
+    message = ai_result.get(
+        "message", "I'm not sure what you'd like me to do. Please specify a ticket operation.",
+    )
+    return {"type": "unknown", "message": message}
+
+
 def _handle_intent(
     ai_result: dict[str, Any],
     tickets_client: TicketInterface,
 ) -> dict[str, Any] | list[dict[str, Any]] | None:
     intent = ai_result.get("intent")
 
-    if intent == "create_ticket":
-        return _handle_create_ticket(ai_result, tickets_client)
+    # Dispatch table for intent handlers
+    handlers = {
+        "create_ticket": _handle_create_ticket,
+        "get_ticket": _handle_get_ticket,
+        "search_tickets": _handle_search_tickets,
+        "update_ticket": _handle_update_ticket,
+        "delete_ticket": _handle_delete_ticket,
+        "chat": _handle_chat,
+        "unknown": _handle_unknown,
+    }
 
-    if intent == "get_ticket":
-        ticket_id = ai_result.get("ticket_id")
-        if ticket_id:
-            found = tickets_client.get_ticket(ticket_id)
-            return _serialize_ticket(found) if found else None
-
-    if intent == "search_tickets":
-        raw_query = ai_result.get("query")
-        query = raw_query if isinstance(raw_query, str) and raw_query.strip() else None
-        status = _parse_status(ai_result.get("status"))
-        matches = tickets_client.search_tickets(query=query, status=status)
-        return [_serialize_ticket(ticket) for ticket in matches]
-
-    if intent == "update_ticket":
-        return _handle_update_ticket(ai_result, tickets_client)
-
-    if intent == "delete_ticket":
-        ticket_id = ai_result.get("ticket_id")
-        if ticket_id:
-            # Check if ticket exists before attempting deletion
-            existing_ticket = tickets_client.get_ticket(ticket_id)
-            if not existing_ticket:
-                logger.warning("Ticket %s not found for deletion", ticket_id)
-                return {"deleted": False, "ticket_id": ticket_id, "error": "Ticket not found"}
-            success = tickets_client.delete_ticket(ticket_id)
-            return {"deleted": success, "ticket_id": ticket_id}
-
-    if intent == "chat":
-        # Handle conversational queries - no ticket operation needed
-        message = ai_result.get("message", "I'm here to help with ticket operations.")
-        return {"type": "chat", "message": message}
-
-    if intent == "unknown":
-        # Handle unclear intents - no ticket operation needed
-        message = ai_result.get("message", "I'm not sure what you'd like me to do. Please specify a ticket operation.")
-        return {"type": "unknown", "message": message}
-
-    return None
+    handler = handlers.get(intent)
+    return handler(ai_result, tickets_client) if handler else None
 
 
 if __name__ == "__main__":  # pragma: no cover
