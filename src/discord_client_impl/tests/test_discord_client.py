@@ -19,7 +19,7 @@ from respx import MockRouter
 from discord_client_impl.discord_impl import DiscordClient
 
 _DecoratedFunc = TypeVar("_DecoratedFunc", bound=Callable[..., Any])
-typed_respx_mock = cast("Callable[[_DecoratedFunc], _DecoratedFunc]", respx.mock)
+typed_respx_mock = cast(Callable[[_DecoratedFunc], _DecoratedFunc], respx.mock)
 
 # Test constants
 MIN_STATE_LENGTH = 10  # Minimum length for OAuth2 state parameter
@@ -349,11 +349,14 @@ class TestErrorHandling:
         with pytest.raises(ValueError, match="Failed to retrieve messages"):
             list(discord_client.get_messages(channel_id="789"))
 
-    def test_operations_without_token(self) -> None:
+    def test_operations_without_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that operations fail without access token."""
+        monkeypatch.delenv("DISCORD_BOT_TOKEN", raising=False)
+        monkeypatch.delenv("DISCORD_DEFAULT_TOKEN_TYPE", raising=False)
         client = DiscordClient(
             client_id="test_client_id",
             client_secret="test_client_secret",
+            access_token=None,
         )
 
         with pytest.raises(AuthenticationError, match="Not authenticated"):
