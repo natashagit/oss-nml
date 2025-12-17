@@ -21,6 +21,8 @@ members = [
     "mail-client-service",
     "mail-client-service-client",
     "openai-impl",
+    "slack-api",
+    "slack-impl",
     "ta-assignment",
     "tickets-api",
     "tickets-client-impl",
@@ -2222,6 +2224,22 @@ wheels = [
 ]
 
 [[package]]
+name = "slack-api"
+version = "0.1.0"
+source = { editable = "src/slack_api" }
+
+[[package]]
+name = "slack-impl"
+version = "0.1.0"
+source = { editable = "src/slack_impl" }
+dependencies = [
+    { name = "httpx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "httpx", specifier = ">=0.27" }]
+
+[[package]]
 name = "sniffio"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2253,6 +2271,8 @@ dependencies = [
     { name = "gtask-client-impl" },
     { name = "openai-impl" },
     { name = "prometheus-fastapi-instrumentator" },
+    { name = "slack-api" },
+    { name = "slack-impl" },
     { name = "task-client-api" },
     { name = "task-client-service" },
     { name = "tickets-api" },
@@ -2298,6 +2318,8 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.1" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.2.1" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.7" },
+    { name = "slack-api", editable = "src/slack_api" },
+    { name = "slack-impl", editable = "src/slack_impl" },
     { name = "task-client-api", git = "https://github.com/gsiri-code/oss-taapp.git?subdirectory=src%2Ftask_client_api&branch=feat%2Faligning-ticket-api" },
     { name = "task-client-service", git = "https://github.com/gsiri-code/oss-taapp.git?subdirectory=src%2Ftask_client_service&rev=feat%2Faligning-ticket-api" },
     { name = "tickets-api", editable = "src/tickets_api" },

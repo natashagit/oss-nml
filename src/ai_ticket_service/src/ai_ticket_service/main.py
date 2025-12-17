@@ -1,6 +1,5 @@
 """FastAPI service that orchestrates AI intent extraction and ticket creation."""
 
-import json
 import logging
 import os
 from typing import Any
@@ -9,13 +8,14 @@ from uuid import uuid4
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from slack_impl.slack_client import SlackClient  # type: ignore[import-untyped]
 from trello_client_impl.oauth import TrelloOAuthHandler  # type: ignore[import-untyped]
 from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # type: ignore[import-untyped]
 
 import openai_impl  # noqa: F401 - registers default AI implementation
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from ai_ticket_service import tickets_api_compat  # noqa: F401 - Import compatibility layer early
-from ai_ticket_service.models import CommandRequest, CommandResponse, HealthCheckResponse
+from ai_ticket_service.models import CommandRequest, CommandResponse, HealthCheckResponse, SlackCommandRequest
 from tickets_api import Ticket, TicketInterface, TicketStatus
 from tickets_client_impl import TicketsClient  # Import at module level for integration tests
 
@@ -27,13 +27,7 @@ app = FastAPI(
 
 load_dotenv()
 logger = logging.getLogger(__name__)
-FORMAT_RESPONSE_PROMPT = (
-    "You are a helpful ticket assistant. Format ticket data into clear text for the user. "
-    "Use numbered sections like 'Ticket 1:' followed by Title, Description, Status, "
-    "and Assignee (if provided). For single-ticket responses, still mention the ticket "
-    "label and summarize succinctly. If there are no tickets or the request failed, "
-    "politely explain the situation. Do not invent information; rely only on provided JSON."
-)
+DEFAULT_SYSTEM_PROMPT = "You are a strict router that extracts intent, title, description."
 
 
 class TicketBackendFactory:
@@ -110,40 +104,43 @@ def _serialize_ticket(ticket: Ticket) -> dict[str, Any]:
     }
 
 
-def _format_ticket_response(
-    client: AIInterface,
-    original_user_input: str,
-    ticket_payload: dict[str, Any] | list[dict[str, Any]] | None,
-) -> str | None:
-    """Format ticket results via AI for user-facing response."""
-    if ticket_payload is None:
-        return None
+def _normalize_ticket_data(
+    ticket_result: dict[str, Any] | list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Normalize ticket result into a list of dicts for formatting."""
+    if ticket_result is None:
+        return []
+    if isinstance(ticket_result, list):
+        return ticket_result
+    return [ticket_result]
 
-    try:
-        payload = json.dumps(ticket_payload, default=str)
-    except (TypeError, ValueError):
-        payload = str(ticket_payload)
 
-    user_prompt = (
-        "Original user request:\n"
-        f"{original_user_input}\n\n"
-        "Ticket data (JSON):\n"
-        f"{payload}\n\n"
-        "Please produce the formatted response."
-    )
+def _format_ticket_markdown(ticket_result: dict[str, Any] | list[dict[str, Any]] | None) -> str:
+    """Render ticket results as Markdown suitable for Slack."""
+    tickets = _normalize_ticket_data(ticket_result)
+    if not tickets:
+        return "No tickets were returned."
 
-    try:
-        response = client.generate_response(
-            user_input=user_prompt,
-            system_prompt=FORMAT_RESPONSE_PROMPT,
+    sections: list[str] = []
+    for idx, ticket in enumerate(tickets, start=1):
+        sections.append(
+            "\n".join(
+                [
+                    f"*Ticket {idx}*",
+                    f"• *Title:* {ticket.get('title','(untitled)')}",
+                    f"• *ID:* `{ticket.get('id','?')}`",
+                    f"• *Status:* {ticket.get('status','unknown')}",
+                    f"• *Description:* {ticket.get('description','')}",
+                ],
+            ),
         )
-    except Exception:
-        logger.exception("Failed to format ticket response via AI")
-        return None
+        if idx >= 5:
+            break
 
-    if isinstance(response, str):
-        return response
-    return json.dumps(response)
+    formatted = "\n\n".join(sections)
+    if len(tickets) > 5:
+        formatted += f"\n\n… and {len(tickets) - 5} more."
+    return formatted
 
 
 def _get_ai_client() -> AIInterface:
@@ -171,16 +168,22 @@ def _ai_generate(
         raise HTTPException(status_code=500, detail=f"Generation failed: {exc!s}") from exc
 
 
-@app.get("/health")
-def health() -> HealthCheckResponse:
-    """Health check."""
-    return HealthCheckResponse(status="healthy", version=app.version or "0.0.0")
+def _build_slack_client() -> SlackClient:
+    """Configure Slack client based on environment."""
+    offline = os.getenv("SLACK_OFFLINE", "false").lower() == "true"
+    base_url = os.getenv("SLACK_BASE_URL")
+    token = os.getenv("SLACK_BOT_TOKEN")
+
+    if offline or not base_url or not token:
+        logger.info("Slack client running in offline mode.")
+        return SlackClient()
+
+    logger.info("Slack client running in ONLINE mode (base_url=%s).", base_url)
+    return SlackClient(base_url=base_url, token=token)
 
 
-@app.post("/command")
-def command(request: CommandRequest) -> CommandResponse:
-    """Process natural language into ticket operations with backend selection."""
-    schema = {
+def _command_schema() -> dict[str, Any]:
+    return {
         "name": "ticket_command",
         "description": (
             "Extract ticketing intent and relevant fields. Use 'chat' for conversational queries "
@@ -203,56 +206,46 @@ def command(request: CommandRequest) -> CommandResponse:
                         "unknown",
                     ],
                 },
-                "title": {"type": ["string", "null"]},
-                "description": {"type": ["string", "null"]},
-                "ticket_id": {"type": ["string", "null"]},
-                "query": {
-                    "type": ["string", "null"],
-                    "description": "Search term; set to null when returning every ticket.",
-                },
-                "status": {"type": ["string", "null"]},
-                "message": {
-                    "type": ["string", "null"],
-                    "description": "Response message for chat or unknown intents",
-                },
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "ticket_id": {"type": "string"},
+                "query": {"type": "string"},
+                "status": {"type": "string"},
+                "message": {"type": "string", "description": "Response message for chat or unknown intents"},
             },
             "required": ["intent", "title", "description", "ticket_id", "query", "status", "message"],
             "additionalProperties": False,
         },
     }
 
-    ai_client = _get_ai_client()
-    ai_result = _ai_generate(ai_client, request, schema_override=schema)
 
+def _execute_command(request: CommandRequest) -> CommandResponse:
+    client = _get_ai_client()
+    schema = _command_schema()
+
+    ai_result = _ai_generate(client, request, schema_override=schema)
     ticket_result: dict[str, Any] | list[dict[str, Any]] | None = None
     backend_status = _get_backend_status(request.backend)
-    formatted_response: str | None = None
 
     if isinstance(ai_result, dict):
         intent = ai_result.get("intent")
 
-        # Handle chat/unknown intents without needing backend
         if intent in ("chat", "unknown"):
             if intent == "chat":
                 message = ai_result.get("message", "I'm here to help with ticket operations.")
                 ticket_result = {"type": "chat", "message": message}
-            else:  # unknown
+            else:
                 message = ai_result.get("message", "I'm not sure what you'd like me to do. Please specify a ticket operation.")
                 ticket_result = {"type": "unknown", "message": message}
         elif backend_status == "success":
-            # Handle ticket operations only if backend is available
             try:
                 tickets_client = TicketBackendFactory.create_backend(request.backend)
                 ticket_result = _handle_intent(ai_result, tickets_client)
-                if ticket_result is not None:
-                    formatted_response = _format_ticket_response(
-                        ai_client,
-                        original_user_input=request.user_input,
-                        ticket_payload=ticket_result,
-                    )
             except (ValueError, RuntimeError):
                 logger.exception("Failed to process ticket operation")
                 backend_status = "error"
+
+    formatted_response = _format_ticket_markdown(ticket_result)
 
     return CommandResponse(
         ai_result=ai_result,
@@ -261,6 +254,18 @@ def command(request: CommandRequest) -> CommandResponse:
         backend_status=backend_status,
         formatted_response=formatted_response,
     )
+
+
+@app.get("/health")
+def health() -> HealthCheckResponse:
+    """Health check."""
+    return HealthCheckResponse(status="healthy", version=app.version or "0.0.0")
+
+
+@app.post("/command")
+def command(request: CommandRequest) -> CommandResponse:
+    """Process natural language into ticket operations with backend selection."""
+    return _execute_command(request)
 
 
 def _parse_status(status_str: str | None) -> TicketStatus | None:
@@ -388,6 +393,36 @@ def _handle_intent(
 
     handler = handlers.get(intent)
     return handler(ai_result, tickets_client) if handler else None
+
+
+@app.post("/slack/command")
+def slack_command(request: SlackCommandRequest) -> dict[str, str]:
+    """Process a Slack message and post formatted results back to Slack."""
+    backend = os.getenv("TICKET_BACKEND", "google_tasks")
+    system_prompt = os.getenv("SLACK_SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT)
+    channel_id = os.getenv("SLACK_CHANNEL_ID")
+
+    if not channel_id:
+        raise HTTPException(status_code=500, detail="SLACK_CHANNEL_ID not configured.")
+
+    command_request = CommandRequest(
+        user_input=request.user_input,
+        system_prompt=system_prompt,
+        backend=backend,
+    )
+    result = _execute_command(command_request)
+
+    formatted = result.formatted_response or _format_ticket_markdown(result.ticket_result)
+    slack_client = _build_slack_client()
+    slack_client.post_message(channel_id, f"User: {request.user_input}")
+    slack_client.post_message(channel_id, formatted)
+
+    return {
+        "status": "posted",
+        "channel_id": channel_id,
+        "backend_used": result.backend_used,
+        "message": formatted,
+    }
 
 
 if __name__ == "__main__":  # pragma: no cover

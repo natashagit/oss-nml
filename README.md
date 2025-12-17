@@ -178,6 +178,35 @@ Use `main.py` to exercise the adapter against the running service:
 TICKET_BACKEND=trello uv run python main.py
 ```
 
+### Slack ←→ AI Ticket Orchestration
+
+You can route Slack (or Slack-like) chat messages into the ticket pipeline either via the
+bundled helper script or directly through the service's `/slack/command` endpoint. The Slack
+client runs in offline mode unless `SLACK_BASE_URL` and `SLACK_BOT_TOKEN` are defined.
+
+```bash
+# ensure the AI ticket service is running locally
+UV_CACHE_DIR=.uv_cache PYTHONPATH=src uv run --extra dev uvicorn ai_ticket_service.main:app --reload --port 8000
+
+# in another shell, send a Slack message through the workflow
+PYTHONPATH=src uv run --extra dev python slack_ticket_bot.py "list all tickets assigned to me"
+```
+
+Environment variables:
+- `SLACK_BASE_URL`, `SLACK_BOT_TOKEN` (set both and `SLACK_OFFLINE=false` for real Slack; omit or set `SLACK_OFFLINE=true` for offline stub)
+- `SLACK_CHANNEL_ID` (defaults to `C001`)
+- `AI_TICKET_SERVICE_URL`, `TICKET_BACKEND`, and ticket backend credentials as described above.
+
+You can also POST directly to the service:
+
+```bash
+curl -X POST http://127.0.0.1:8000/slack/command \
+  -H "Content-Type: application/json" \
+  -d '{"user_input": "list all tickets"}'
+```
+
+The service posts `User: ...` plus the formatted ticket summary to the specified Slack channel.
+
 ### Running the AI Service Demo (HW2)
 
 The main demo (`main.py`) demonstrates the AI service with both conversational and structured output:
