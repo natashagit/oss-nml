@@ -10,6 +10,7 @@ import uvicorn
 from chat_client_api.client import ChatInterface
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from trello_client_impl.oauth import TrelloOAuthHandler  # type: ignore[import-untyped]
 from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # type: ignore[import-untyped]
 
@@ -26,7 +27,7 @@ from ai_ticket_service.models import (
 )
 from tickets_api import Ticket, TicketInterface, TicketStatus
 from tickets_client_impl import TicketsClient  # Import at module level for integration tests
-from prometheus_fastapi_instrumentator import Instrumentator
+
 app = FastAPI(
     title="AI Ticket Orchestration Service",
     description="Natural language to ticket actions via AI + ticket client",
