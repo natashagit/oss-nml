@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from ai_ticket_service.main import app
 from ai_api import AIInterface
 from tickets_api import TicketStatus
+from ai_ticket_service.models import CommandRequest, CommandResponse
 
 
 class _FakeAIClient(AIInterface):
@@ -521,6 +522,93 @@ def test_backend_factory_trello_success(monkeypatch: pytest.MonkeyPatch) -> None
     backend = TicketBackendFactory.create_backend("trello")
     assert backend is not None
     assert isinstance(backend, MockTrelloClient)
+
+
+def test_backend_factory_trello_calls_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure the Trello backend wiring invokes OAuth handler and client constructors."""
+    from ai_ticket_service.main import TicketBackendFactory
+
+    monkeypatch.setenv("TRELLO_TOKEN", "token")
+    monkeypatch.setenv("TRELLO_BOARD_ID", "board")
+    monkeypatch.setenv("TRELLO_API_KEY", "api-key")
+    monkeypatch.setenv("TRELLO_API_SECRET", "api-secret")
+    monkeypatch.delenv("REDIRECT_URI", raising=False)
+
+    class DummyOAuth:
+        called = False
+
+        @classmethod
+        def from_env(cls) -> "DummyOAuth":
+            cls.called = True
+            return cls()
+
+    class DummyClient:
+        def __init__(self, **kwargs: Any) -> None:
+            self.kwargs = kwargs
+
+    monkeypatch.setattr("ai_ticket_service.main.TrelloOAuthHandler", DummyOAuth)
+    monkeypatch.setattr("ai_ticket_service.main.TrelloTicketClientImpl", DummyClient)
+
+    backend = TicketBackendFactory.create_backend("trello")
+    assert isinstance(backend, DummyClient)
+    assert DummyOAuth.called is True
+
+
+def test_chat_command_endpoint_posts_messages(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    """`/chat/command` should send both the user text and formatted output."""
+    sent_messages: list[str] = []
+
+    class FakeChatClient:
+        def send_message(self, channel_id: str, content: str) -> bool:  # noqa: ARG002
+            sent_messages.append(content)
+            return True
+
+    def fake_process_command(request: CommandRequest) -> CommandResponse:  # noqa: ARG001
+        return CommandResponse(
+            ai_result={"intent": "chat"},
+            ticket_result=None,
+            backend_used="google_tasks",
+            backend_status="success",
+            formatted_response="Formatted summary",
+        )
+
+    monkeypatch.setenv("CHAT_CHANNEL_ID", "channel-123")
+    monkeypatch.setattr("ai_ticket_service.main._get_chat_client", lambda user_id=None: FakeChatClient())
+    monkeypatch.setattr("ai_ticket_service.main._process_command", fake_process_command)
+
+    response = client.post("/chat/command", json={"user_input": "list the tickets"})
+    assert response.status_code == 200
+    assert sent_messages[0].startswith("User: list the tickets")
+    assert sent_messages[1] == "Formatted summary"
+
+
+def test_chat_command_fallbacks_to_markdown(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    """When formatted response is missing, fallback Markdown should be sent."""
+    sent_messages: list[str] = []
+
+    class FakeChatClient:
+        def send_message(self, channel_id: str, content: str) -> bool:  # noqa: ARG002
+            sent_messages.append(content)
+            return True
+
+    def fake_process_command(request: CommandRequest) -> CommandResponse:  # noqa: ARG001
+        return CommandResponse(
+            ai_result={"intent": "search_tickets"},
+            ticket_result=[
+                {"id": "1", "title": "Fix bug", "description": "Bug desc", "status": "open", "assignee": None},
+            ],
+            backend_used="google_tasks",
+            backend_status="success",
+            formatted_response=None,
+        )
+
+    monkeypatch.setenv("CHAT_CHANNEL_ID", "channel-456")
+    monkeypatch.setattr("ai_ticket_service.main._get_chat_client", lambda user_id=None: FakeChatClient())
+    monkeypatch.setattr("ai_ticket_service.main._process_command", fake_process_command)
+
+    response = client.post("/chat/command", json={"user_input": "list tickets"})
+    assert response.status_code == 200
+    assert "*Ticket 1*" in sent_messages[1]
 
 
 def test_format_ticket_response_none_payload() -> None:

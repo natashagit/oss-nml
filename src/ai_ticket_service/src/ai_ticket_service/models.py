@@ -26,3 +26,9 @@ class CommandResponse(BaseModel):
     backend_used: str
     backend_status: str
     formatted_response: str | None = None
+
+
+class ChatCommandRequest(BaseModel):
+    """Chat relay payload."""
+
+    user_input: str
