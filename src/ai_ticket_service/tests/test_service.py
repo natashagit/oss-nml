@@ -538,7 +538,7 @@ def test_backend_factory_trello_calls_dependencies(monkeypatch: pytest.MonkeyPat
         called = False
 
         @classmethod
-        def from_env(cls) -> "DummyOAuth":
+        def from_env(cls) -> DummyOAuth:
             cls.called = True
             return cls()
 
@@ -559,11 +559,11 @@ def test_chat_command_endpoint_posts_messages(monkeypatch: pytest.MonkeyPatch, c
     sent_messages: list[str] = []
 
     class FakeChatClient:
-        def send_message(self, channel_id: str, content: str) -> bool:  # noqa: ARG002
+        def send_message(self, channel_id: str, content: str) -> bool:
             sent_messages.append(content)
             return True
 
-    def fake_process_command(request: CommandRequest) -> CommandResponse:  # noqa: ARG001
+    def fake_process_command(request: CommandRequest) -> CommandResponse:
         return CommandResponse(
             ai_result={"intent": "chat"},
             ticket_result=None,
@@ -587,11 +587,11 @@ def test_chat_command_fallbacks_to_markdown(monkeypatch: pytest.MonkeyPatch, cli
     sent_messages: list[str] = []
 
     class FakeChatClient:
-        def send_message(self, channel_id: str, content: str) -> bool:  # noqa: ARG002
+        def send_message(self, channel_id: str, content: str) -> bool:
             sent_messages.append(content)
             return True
 
-    def fake_process_command(request: CommandRequest) -> CommandResponse:  # noqa: ARG001
+    def fake_process_command(request: CommandRequest) -> CommandResponse:
         return CommandResponse(
             ai_result={"intent": "search_tickets"},
             ticket_result=[

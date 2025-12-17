@@ -7,7 +7,7 @@ from enum import IntEnum
 from typing import Any
 
 import httpx
-from authlib.integrations.httpx_client import OAuth2Client
+from authlib.integrations.httpx_client import OAuth2Client  # type: ignore[import-untyped]
 from chat_client_api.client import ChatInterface
 from chat_client_api.exceptions import (
     AuthenticationError,
@@ -60,7 +60,8 @@ class DiscordClient(ChatInterface):
         self.client_id = client_id or os.environ.get("DISCORD_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("DISCORD_CLIENT_SECRET")
         self.redirect_uri = redirect_uri or os.environ.get(
-            "DISCORD_REDIRECT_URI", "http://localhost:8001/auth/callback"
+            "DISCORD_REDIRECT_URI",
+            "http://localhost:8001/auth/callback",
         )
         # Prefer explicit access_token, otherwise fall back to DISCORD_BOT_TOKEN if present.
         self.access_token = access_token or os.environ.get("DISCORD_BOT_TOKEN")
@@ -245,7 +246,7 @@ class DiscordClient(ChatInterface):
         except httpx.HTTPStatusError as e:
             if e.response.status_code == HTTPStatus.NOT_FOUND:
                 raise MessageNotFoundError(
-                    f"Message {message_id} not found in channel {channel_id}"
+                    f"Message {message_id} not found in channel {channel_id}",
                 ) from e
             logger.exception("Failed to get message")
             raise MessageNotFoundError(f"Failed to retrieve message: {e}") from e
@@ -344,7 +345,7 @@ class DiscordClient(ChatInterface):
         except httpx.HTTPStatusError as e:
             if e.response.status_code == HTTPStatus.NOT_FOUND:
                 raise MessageNotFoundError(
-                    f"Message {message_id} not found in channel {channel_id}"
+                    f"Message {message_id} not found in channel {channel_id}",
                 ) from e
             logger.exception("Failed to delete message")
             raise MessageDeleteError(f"Failed to delete message: {e}") from e

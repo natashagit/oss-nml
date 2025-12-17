@@ -3,11 +3,12 @@
 import logging
 import os
 from datetime import UTC, datetime
+from typing import NoReturn
 
 # Import session-backed credential helpers from the service package.
 # The service package is available on the PYTHONPATH as `discord_client_service` when
 # the workspace packages are installed in editable/development mode.
-from discord_client_service.auth_session import (
+from discord_client_service.auth_session import (  # type: ignore[import-not-found]
     delete_credential,
     get_credential,
     set_credential,
@@ -19,6 +20,11 @@ LOGGER = logging.getLogger(__name__)
 
 # central constant to avoid repeating string literals flagged by linters
 BOT_TOKEN_TYPE = "Bot"  # noqa: S105
+
+
+def _raise_missing_refresh_token(guild_id: str) -> NoReturn:
+    msg = f"No refresh token available to refresh credentials for guild {guild_id}"
+    raise ValueError(msg)
 
 
 async def get_client_for_user(guild_id: str) -> DiscordClient:
@@ -70,13 +76,7 @@ async def get_client_for_user(guild_id: str) -> DiscordClient:
                     # Ensure we pass a str to _refresh_access_token (mypy requires str)
                     refresh_token = credentials.get("refresh_token")
                     if not refresh_token:
-                        # Assign the message to a variable (avoid f-string in the raise
-                        # expression and keep line lengths under the linter limit).
-                        msg = (
-                            "No refresh token available to refresh credentials "
-                            f"for guild {guild_id}"
-                        )
-                        raise ValueError(msg)
+                        _raise_missing_refresh_token(guild_id)
 
                     # convert to str explicitly to satisfy the DiscordClient API contract
                     new_token_data = client._refresh_access_token(str(refresh_token))
@@ -87,9 +87,7 @@ async def get_client_for_user(guild_id: str) -> DiscordClient:
 
                     expires_at_val = new_token_data.get("expires_at")
                     expires_in_val = new_token_data.get("expires_in")
-                    expires_val = (
-                        expires_at_val if expires_at_val is not None else expires_in_val
-                    )
+                    expires_val = expires_at_val if expires_at_val is not None else expires_in_val
                     scope_val = new_token_data.get("scope", credentials.get("scope"))
 
                     # Persist refreshed tokens in credential store
@@ -141,12 +139,11 @@ async def get_bot_client_for_guild(guild_id: str) -> DiscordClient:
     credentials = await get_credential(guild_id)
     if credentials and str(credentials.get("token_type", "")).lower() == "bot":
         return DiscordClient(
-            access_token=credentials.get("access_token"), token_type=BOT_TOKEN_TYPE
+            access_token=credentials.get("access_token"),
+            token_type=BOT_TOKEN_TYPE,
         )
 
-    msg = (
-        "No bot token available for guild. Set DISCORD_BOT_TOKEN or install the bot to the guild."
-    )
+    msg = "No bot token available for guild. Set DISCORD_BOT_TOKEN or install the bot to the guild."
     raise ValueError(msg)
 
 
@@ -199,7 +196,7 @@ async def delete_user_credentials(guild_id: str) -> bool:
     else:
         LOGGER.warning("No credentials found to delete for guild: %s", guild_id)
 
-    return deleted
+    return bool(deleted)
 
 
 async def check_user_authenticated(guild_id: str) -> bool:

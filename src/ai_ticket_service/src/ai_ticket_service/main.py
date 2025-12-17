@@ -7,13 +7,14 @@ from typing import Any
 from uuid import uuid4
 
 import uvicorn
-import chat_client_api
-import discord_client_impl  # noqa: F401  # auto-registers chat implementation
+from chat_client_api.client import ChatInterface
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from trello_client_impl.oauth import TrelloOAuthHandler  # type: ignore[import-untyped]
 from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # type: ignore[import-untyped]
 
+import chat_client_api
+import discord_client_impl  # noqa: F401  # auto-registers chat implementation
 import openai_impl  # noqa: F401 - registers default AI implementation
 from ai_api import AIInterface, get_client  # type: ignore[attr-defined]
 from ai_ticket_service import tickets_api_compat  # noqa: F401 - Import compatibility layer early
@@ -23,7 +24,6 @@ from ai_ticket_service.models import (
     CommandResponse,
     HealthCheckResponse,
 )
-from chat_client_api.client import ChatInterface
 from tickets_api import Ticket, TicketInterface, TicketStatus
 from tickets_client_impl import TicketsClient  # Import at module level for integration tests
 
@@ -36,6 +36,7 @@ app = FastAPI(
 load_dotenv()
 logger = logging.getLogger(__name__)
 DEFAULT_SYSTEM_PROMPT = "You are a strict router that extracts intent, title, description."
+
 
 class TicketBackendFactory:
     """Factory for creating ticket backend clients."""
@@ -456,11 +457,7 @@ def _handle_chat_command(request: ChatCommandRequest) -> dict[str, str]:
     """Process chat input, orchestrate ticket action, and post to chat backend."""
     backend = os.getenv("TICKET_BACKEND", "google_tasks")
     system_prompt = os.getenv("CHAT_SYSTEM_PROMPT") or DEFAULT_SYSTEM_PROMPT
-    channel_id = (
-        os.getenv("CHAT_CHANNEL_ID")
-        or os.getenv("DISCORD_CHANNEL_ID")
-        or os.getenv("SLACK_CHANNEL_ID")
-    )
+    channel_id = os.getenv("CHAT_CHANNEL_ID") or os.getenv("DISCORD_CHANNEL_ID") or os.getenv("SLACK_CHANNEL_ID")
 
     if not channel_id:
         raise HTTPException(status_code=500, detail="CHAT_CHANNEL_ID not configured.")
@@ -493,7 +490,7 @@ def _handle_chat_command(request: ChatCommandRequest) -> dict[str, str]:
 
 @app.post("/chat/command")
 def chat_command(request: ChatCommandRequest) -> dict[str, str]:
-    """Generic chat integration endpoint."""
+    """Process chat command via generic endpoint."""
     return _handle_chat_command(request)
 
 

@@ -4,14 +4,18 @@ These tests are small unit tests for behavior of the client and are
 annotated with simple docstrings and type hints to satisfy linting.
 """
 
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 from unittest.mock import MagicMock
 
 import pytest
-import respx
+import respx  # type: ignore[import-not-found]
 from httpx import Response
 
 from discord_client_impl.discord_impl import DiscordClient
+
+_DecoratedFunc = TypeVar("_DecoratedFunc", bound=Callable[..., Any])
+typed_respx_mock = cast("Callable[[_DecoratedFunc], _DecoratedFunc]", respx.mock)
 
 
 def test_get_authorization_url_without_client_id(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -34,7 +38,7 @@ def test_update_http_client_sets_headers() -> None:
     assert client._http_client.headers.get("Authorization") == f"{client.token_type} newtoken"
 
 
-@respx.mock
+@typed_respx_mock
 def test_leave_guild_success() -> None:
     """Leaving a guild returns True on HTTP 204."""
     client = DiscordClient(client_id="cid", client_secret="cs", access_token="t")
@@ -43,7 +47,7 @@ def test_leave_guild_success() -> None:
     assert client.leave_guild("g1") is True
 
 
-@respx.mock
+@typed_respx_mock
 def test_leave_guild_failure() -> None:
     """Non-2xx response when leaving a guild raises ValueError."""
     client = DiscordClient(client_id="cid", client_secret="cs", access_token="t")
@@ -53,7 +57,7 @@ def test_leave_guild_failure() -> None:
         client.leave_guild("g1")
 
 
-@respx.mock
+@typed_respx_mock
 def test_get_guild_channels_success() -> None:
     """get_guild_channels yields Channel objects for the guild on success."""
     client = DiscordClient(client_id="cid", client_secret="cs", access_token="t")
@@ -66,7 +70,7 @@ def test_get_guild_channels_success() -> None:
     assert channels[0].channel_id == "c1"
 
 
-@respx.mock
+@typed_respx_mock
 def test_get_guild_channels_failure() -> None:
     """get_guild_channels raises ValueError on non-2xx HTTP response."""
     client = DiscordClient(client_id="cid", client_secret="cs", access_token="t")
