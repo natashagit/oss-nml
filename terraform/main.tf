@@ -28,9 +28,10 @@ resource "aws_key_pair" "generated_key" {
   public_key = tls_private_key.pk.public_key_openssh
 }
 
+# FIX: Moved the filename to /tmp/ to avoid leaking it in the repo path per peer review
 resource "local_file" "ssh_key" {
   content         = tls_private_key.pk.private_key_pem
-  filename        = "${path.module}/hw3-key-free-tier.pem"
+  filename        = "/tmp/hw3-key-free-tier.pem" 
   file_permission = "0400"
 }
 
@@ -107,7 +108,7 @@ resource "aws_instance" "server" {
               apt-get update
               apt-get install -y docker.io docker-compose-v2 git
 
-              # 3. Clone Repo (CRITICAL CHANGE: Targeting the final branch)
+              # 3. Clone Repo (Targeting the final working branch)
               cd /home/ubuntu
               git clone --branch hw_3_final_submission_working_discord https://github.com/natashagit/oss-nml.git app
 
@@ -126,6 +127,7 @@ output "grafana_url" {
   value = "http://${aws_instance.server.public_ip}:3000"
 }
 
+# FIX: Updated output to reflect new secure path
 output "ssh_command" {
-  value = "ssh -i hw3-key-free-tier.pem ubuntu@${aws_instance.server.public_ip}"
+  value = "ssh -i /tmp/hw3-key-free-tier.pem ubuntu@${aws_instance.server.public_ip}"
 }
