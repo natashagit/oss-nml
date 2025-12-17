@@ -19,7 +19,7 @@ from respx import MockRouter
 from discord_client_impl.discord_impl import DiscordClient
 
 _DecoratedFunc = TypeVar("_DecoratedFunc", bound=Callable[..., Any])
-typed_respx_mock = cast(Callable[[_DecoratedFunc], _DecoratedFunc], respx.mock)
+typed_respx_mock = cast("Callable[[_DecoratedFunc], _DecoratedFunc]", respx.mock)
 
 # Test constants
 MIN_STATE_LENGTH = 10  # Minimum length for OAuth2 state parameter

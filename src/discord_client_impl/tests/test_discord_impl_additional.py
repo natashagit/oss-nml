@@ -15,7 +15,7 @@ from httpx import Response
 from discord_client_impl.discord_impl import DiscordClient
 
 _DecoratedFunc = TypeVar("_DecoratedFunc", bound=Callable[..., Any])
-typed_respx_mock = cast(Callable[[_DecoratedFunc], _DecoratedFunc], respx.mock)
+typed_respx_mock = cast("Callable[[_DecoratedFunc], _DecoratedFunc]", respx.mock)
 
 
 def test_get_authorization_url_without_client_id(monkeypatch: pytest.MonkeyPatch) -> None:
