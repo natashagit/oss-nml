@@ -107,9 +107,9 @@ resource "aws_instance" "server" {
               apt-get update
               apt-get install -y docker.io docker-compose-v2 git
 
-              # 3. Clone Repo (Pointing to the final, integrated branch)
+              # 3. Clone Repo (CRITICAL CHANGE: Targeting the final branch)
               cd /home/ubuntu
-              git clone --branch hw_3_second_submission https://github.com/natashagit/oss-nml.git app
+              git clone --branch hw_3_final_submission_working_discord https://github.com/natashagit/oss-nml.git app
 
               # 4. Permissions
               chown -R ubuntu:ubuntu /home/ubuntu/app

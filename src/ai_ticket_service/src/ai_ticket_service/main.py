@@ -26,13 +26,13 @@ from ai_ticket_service.models import (
 )
 from tickets_api import Ticket, TicketInterface, TicketStatus
 from tickets_client_impl import TicketsClient  # Import at module level for integration tests
-
+from prometheus_fastapi_instrumentator import Instrumentator
 app = FastAPI(
     title="AI Ticket Orchestration Service",
     description="Natural language to ticket actions via AI + ticket client",
     version="0.1.0",
 )
-
+Instrumentator().instrument(app).expose(app)
 load_dotenv()
 logger = logging.getLogger(__name__)
 DEFAULT_SYSTEM_PROMPT = "You are a strict router that extracts intent, title, description."
