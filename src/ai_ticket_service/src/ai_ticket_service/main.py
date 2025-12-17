@@ -10,6 +10,7 @@ import uvicorn
 from chat_client_api.client import ChatInterface
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from trello_client_impl.oauth import TrelloOAuthHandler  # type: ignore[import-untyped]
 from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl  # type: ignore[import-untyped]
 
@@ -32,7 +33,7 @@ app = FastAPI(
     description="Natural language to ticket actions via AI + ticket client",
     version="0.1.0",
 )
-
+Instrumentator().instrument(app).expose(app)
 load_dotenv()
 logger = logging.getLogger(__name__)
 DEFAULT_SYSTEM_PROMPT = "You are a strict router that extracts intent, title, description."
