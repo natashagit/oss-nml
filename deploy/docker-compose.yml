@@ -10,6 +10,15 @@ services:
       - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TRELLO_API_KEY=${TRELLO_API_KEY}
+      - TRELLO_API_SECRET=${TRELLO_API_SECRET}
+      - TRELLO_TOKEN=${TRELLO_TOKEN}
+      - TRELLO_BOARD_ID=${TRELLO_BOARD_ID}
+      - REDIRECT_URI=${REDIRECT_URI:-http://localhost:8000/callback}
+      - TASKS_INTERACTIVE=${TASKS_INTERACTIVE:-false}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_DEFAULT_TOKEN_TYPE=${DISCORD_DEFAULT_TOKEN_TYPE:-Bot}
+      - CHAT_CHANNEL_ID=${CHAT_CHANNEL_ID}
     restart: always
 
   prometheus:

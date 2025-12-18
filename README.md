@@ -5,10 +5,33 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-This repository is a component-oriented workspace that demonstrates natural-language orchestration for tickets plus earlier AI/Mail stacks. The primary focus for HW3 is the AI Ticket Service that routes user text through an AI model, extracts intent, and executes ticket actions against a pluggable backend (Google Tasks or Trello).
+This repository is a component-oriented workspace that demonstrates natural-language orchestration for tickets plus earlier AI/Mail stacks. The primary focus is the **AI Ticket Service** that routes user text through an AI model, extracts intent, and executes ticket actions against a pluggable backend (Google Tasks or Trello).
 
-Included stacks:
-1. **AI Ticket Stack (new)**: AI → Ticket backend (Google Tasks or Trello) with a FastAPI orchestration service and adapter.
+## 🚀 Quick Start - AI Ticket Service
+
+```bash
+# 1. Setup environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# 2. Run locally
+uv run --extra dev uvicorn ai_ticket_service.main:app --reload --port 8000
+
+# 3. Or run with Docker
+docker build -t ai-ticket-service .
+docker run -p 8000:8000 --env-file .env ai-ticket-service
+```
+
+**Access the service:**
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+
+📖 **Detailed guide:** See [AI_TICKET_SERVICE.md](./AI_TICKET_SERVICE.md)
+
+## Component Stacks
+
+1. **AI Ticket Stack**: AI → Ticket backend (Google Tasks or Trello) with a FastAPI orchestration service and adapter.
 2. **AI Service Stack**: OpenAI-powered AI assistant with conversational and structured output capabilities.
 3. **Mail Client Stack**: Gmail API integration for email management.
 
