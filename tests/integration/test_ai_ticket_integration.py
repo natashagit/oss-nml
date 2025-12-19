@@ -63,93 +63,48 @@ class _FakeTickets:
         return self.deleted
 
 
+class _FakeChatClient:
+    def __init__(self) -> None:
+        self.messages: list[tuple[str, str]] = []
+
+    def send_message(self, channel_id: str, content: str) -> None:
+        self.messages.append((channel_id, content))
+
+
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 
 
-def test_create_and_get_flow(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+def test_chat_command_flow(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
     fake_ai = _FakeAI(
         [
             {
-                "intent": "create_ticket",
-                "title": "New Ticket",
-                "description": "New Desc",
+                "intent": "search_tickets",
+                "title": "",
+                "description": "",
+                "ticket_id": "",
+                "query": "login",
+                "status": "",
             },
-            "Ticket 1: Created New Ticket.",
-            {
-                "intent": "get_ticket",
-                "ticket_id": "tid-xyz",
-            },
-            "Ticket 1: Retrieved tid-xyz.",
+            "Ticket 1: Login issue.",
         ],
     )
     fake_tickets = _FakeTickets()
+    fake_chat = _FakeChatClient()
 
     monkeypatch.setattr("ai_ticket_service.main.get_client", lambda: fake_ai)
-    monkeypatch.setattr("ai_ticket_service.main.TicketsClient", lambda interactive=False: fake_tickets)
+    monkeypatch.setattr("ai_ticket_service.main.TicketBackendFactory.create_backend", lambda backend_type: fake_tickets)
+    monkeypatch.setattr("ai_ticket_service.main.chat_client_api.get_client", lambda user_id=None: fake_chat)
+    monkeypatch.setenv("CHAT_CHANNEL_ID", "chan-123")
 
-    # Create
-    create_resp = client.post(
-        "/command",
-        json={"user_input": "create", "system_prompt": "prompt", "response_schema": {"type": "object"}},
-    )
-    assert create_resp.status_code == 200
-    data = create_resp.json()
-    assert data["ticket_result"]["id"] == "tid-xyz"
-    assert data["ticket_result"]["title"] == "New Ticket"
-    assert data["formatted_response"] == "Ticket 1: Created New Ticket."
-
-    # Get
-    get_resp = client.post(
-        "/command",
-        json={"user_input": "get it", "system_prompt": "prompt", "response_schema": {"type": "object"}},
-    )
-    assert get_resp.status_code == 200
-    get_data = get_resp.json()
-    assert get_data["ticket_result"]["id"] == "tid-xyz"
-    assert get_data["formatted_response"] == "Ticket 1: Retrieved tid-xyz."
-
-
-def test_update_and_delete_flow(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
-    fake_ai = _FakeAI(
-        [
-            {
-                "intent": "update_ticket",
-                "ticket_id": "tid-xyz",
-                "title": "Updated",
-                "status": "closed",
-            },
-            "Ticket 1: Updated",
-            {
-                "intent": "delete_ticket",
-                "ticket_id": "tid-xyz",
-            },
-            "Ticket 1: Deleted",
-        ],
-    )
-    fake_tickets = _FakeTickets()
-
-    monkeypatch.setattr("ai_ticket_service.main.get_client", lambda: fake_ai)
-    monkeypatch.setattr("ai_ticket_service.main.TicketsClient", lambda interactive=False: fake_tickets)
-
-    # Update
-    upd_resp = client.post(
-        "/command",
-        json={"user_input": "update", "system_prompt": "prompt", "response_schema": {"type": "object"}},
-    )
-    assert upd_resp.status_code == 200
-    upd_data = upd_resp.json()
-    assert upd_data["ticket_result"]["title"] == "Updated"
-    assert upd_data["ticket_result"]["status"] == "closed"
-    assert upd_data["formatted_response"] == "Ticket 1: Updated"
-
-    # Delete
-    del_resp = client.post(
-        "/command",
-        json={"user_input": "delete", "system_prompt": "prompt", "response_schema": {"type": "object"}},
-    )
-    assert del_resp.status_code == 200
-    del_data = del_resp.json()
-    assert del_data["ticket_result"]["deleted"] is True
-    assert del_data["formatted_response"] == "Ticket 1: Deleted"
+    response = client.post("/chat/command", json={"user_input": "list tickets about login"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "posted"
+    assert data["channel_id"] == "chan-123"
+    assert data["message"] == "Ticket 1: Login issue."
+    assert fake_chat.messages == [
+        ("chan-123", "User: list tickets about login"),
+        ("chan-123", "Ticket 1: Login issue."),
+    ]

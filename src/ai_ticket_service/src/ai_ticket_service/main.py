@@ -333,12 +333,6 @@ def _process_command(request: CommandRequest) -> CommandResponse:
     )
 
 
-@app.post("/command")
-def command(request: CommandRequest) -> CommandResponse:
-    """Process natural language into ticket operations with backend selection."""
-    return _process_command(request)
-
-
 def _parse_status(status_str: str | None) -> TicketStatus | None:
     if not status_str:
         return None
