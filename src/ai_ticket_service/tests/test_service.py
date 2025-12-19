@@ -639,3 +639,13 @@ def test_format_ticket_response_handles_ai_exception() -> None:
             raise RuntimeError(msg)
 
     assert _format_ticket_response(RaisingAI(), "request", {"id": "123"}) is None
+
+
+def test_format_ticket_response_chat_passthrough() -> None:
+    """Chat-style responses should bypass ticket formatting."""
+    from ai_ticket_service.main import _format_ticket_response
+
+    client = _FakeAIClient("unused")
+    ticket_result = {"type": "chat", "message": "I'm here to help."}
+    result = _format_ticket_response(client, "hello", ticket_result, ai_result={"intent": "chat"})
+    assert result == "I'm here to help."

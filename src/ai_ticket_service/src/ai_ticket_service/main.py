@@ -170,6 +170,8 @@ def _format_ticket_response(
     """Format ticket results via AI to achieve a consistent layout."""
     if ticket_result is None:
         return None
+    if isinstance(ticket_result, dict) and ticket_result.get("type") in {"chat", "unknown"}:
+        return str(ticket_result.get("message", ""))
 
     if ai_result is None:
         ai_context: dict[str, Any] = {"intent": "formatting"}
