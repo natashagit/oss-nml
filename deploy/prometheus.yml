@@ -1,9 +1,9 @@
-# deploy/prometheus.yml
 global:
-  scrape_interval: 5s
+  scrape_interval: 15s # Increased interval for external scraping
 
-# deploy/prometheus.yml
 scrape_configs:
-  - job_name: "ai_ticket_service" 
+  - job_name: "ai_ticket_service_render"
+    metrics_path: "/metrics"
+    scheme: "https"
     static_configs:
-      - targets: ["ai_service:8000"]
+      - targets: ["oss-nml.onrender.com"]
