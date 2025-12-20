@@ -1,4 +1,4 @@
-# Chat AI Ticket Service
+# Chat AI Ticket Orchestration
 
 Live deployment: https://oss-nml.onrender.com/docs
 
