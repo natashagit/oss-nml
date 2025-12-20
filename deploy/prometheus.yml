@@ -2,7 +2,8 @@
 global:
   scrape_interval: 5s
 
+# deploy/prometheus.yml
 scrape_configs:
-  - job_name: "ai_service"
+  - job_name: "ai_ticket_service" 
     static_configs:
       - targets: ["ai_service:8000"]

@@ -1,19 +1,25 @@
 # AI Ticket Service
 
-FastAPI service that turns natural language into ticket operations by chaining an AI model with a pluggable ticket backend (Google Tasks or Trello).
+Live deployment: https://oss-nml.onrender.com/docs
+
+FastAPI service that turns natural language into ticket operations by chaining an AI model with a
+pluggable ticket backend (Google Tasks or Trello). It can also post the formatted response back
+to a chat channel (Discord) through the shared chat client interface.
+
+Workflow (high level):
+User input goes to AI for intent extraction, then the ticket backend executes the action.
+The AI formats the ticket results and the chat client posts the response to the channel.
 
 ## Endpoints
-- `GET /health` – simple liveness check.
-- `POST /command` – body:
+- `GET /health` - simple liveness check.
+- `POST /chat/command` - body:
   ```json
   {
-    "user_input": "Create a ticket to add rate limiting to the public API.",
-    "system_prompt": "You are a concise ticketing assistant.",
-    "backend": "trello",
-    "response_schema": null
+    "user_input": "Create a ticket to add rate limiting to the public API."
   }
   ```
-  Returns the AI-extracted command plus the ticket backend result.
+  Returns the AI-extracted command, ticket backend result, and the chat post status.
+Deployed docs: https://oss-nml.onrender.com/docs
 
 ## Configuration
 Load environment variables (e.g., via `.env`) before running:
@@ -36,6 +42,13 @@ Load environment variables (e.g., via `.env`) before running:
 - `TRELLO_BOARD_ID`
 - `REDIRECT_URI` (optional, default set to `http://localhost:8000/callback` if missing)
 
+### Chat (Discord)
+- `DISCORD_BOT_TOKEN`
+- `CHAT_CHANNEL_ID` (or `DISCORD_CHANNEL_ID`)
+- `DISCORD_DEFAULT_TOKEN_TYPE` (optional, default `Bot`)
+- `CHAT_SYSTEM_PROMPT` (optional)
+- `CHAT_USER_ID` (optional)
+
 ## Running the service
 ```bash
 UV_CACHE_DIR=.uv_cache \
@@ -47,18 +60,15 @@ Then open `http://127.0.0.1:8000/docs` for the interactive API.
 ## Switching backends
 - Default backend is `google_tasks`.
 - Set `TICKET_BACKEND=trello` to use Trello.
-- You can also pass `backend` in the `POST /command` payload to override per request.
+- You can also pass `backend` in the `POST /chat/command` payload to override per request.
 
 ## 📊 Telemetry & Monitoring (Live URLs)
-* **Grafana Dashboard (Visuals):** [http://44.204.205.83:3000](http://44.204.205.83:3000)
+* **Grafana Dashboard (Visuals):** [http://3.239.197.228:3000/d/adbqk72/ai-ticket-service-telemetry?orgId=1](telemetry website)
   * *Login:* `admin` / `admin`
   * *View:* Real-time latency and error rate graphs.
-* **Raw Metrics:** [http://44.204.205.83:8000/metrics](http://44.204.205.83:8000/metrics)
-  * *Description:* Prometheus formatted metrics exposed by the AI Service.
 
 ## Testing
 Run component tests for this service:
 ```bash
 UV_CACHE_DIR=.uv_cache uv run --extra dev pytest src/ai_ticket_service/tests
 ```
-

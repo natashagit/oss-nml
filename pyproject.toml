@@ -10,7 +10,10 @@ dependencies = [
     "tickets-api",
     "tickets-client-impl",
     "ai-ticket-adapter",
+    "chat-client-api",
+    "discord-client-impl",
     "prometheus-fastapi-instrumentator>=6.1.0",
+    "respx>=0.22.0",
     "gtask-client-impl @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/gtask_client_impl",
     "task-client-api @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_api",
     "task-client-service @ git+https://github.com/gsiri-code/oss-taapp.git@feat/aligning-ticket-api#subdirectory=src/task_client_service",
@@ -49,6 +52,8 @@ members = [
   "src/ai_ticket_service",
   "src/ai_ticket_service_client",
   "src/ai_ticket_adapter",
+  "src/chat_client_api",
+  "src/discord_client_impl",
 ]
 
 [tool.ruff]
@@ -92,6 +97,8 @@ mypy_path = [
     "src/ai_ticket_service/src",
     "src/ai_ticket_service_client",
     "src/ai_ticket_adapter/src",
+    "src/chat_client_api/src",
+    "src/discord_client_impl/src",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -161,6 +168,8 @@ omit = [
     "src/mail_client_adapter/*",
     "src/mail_client_service/*",
     "src/gmail_client_impl/*",
+    "src/chat_client_api/*",
+    "src/discord_client_impl/*",
 ]
 
 
@@ -198,4 +207,6 @@ ai_ticket_service = { workspace = true }
 ai_ticket_service_client = { workspace = true }
 ai_ticket_adapter = { workspace = true }
 trello-client-impl = { git = "https://github.com/austinhuang0131/oss-fall2025.git", branch = "hw3", subdirectory = "src/trello_client_impl" }
+chat-client-api = { workspace = true }
+discord-client-impl = { workspace = true }
 trello-ticket-impl = { git = "https://github.com/austinhuang0131/oss-fall2025.git", branch = "hw3", subdirectory = "src/trello_ticket_impl" }
