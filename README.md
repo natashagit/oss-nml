@@ -1,4 +1,4 @@
-# OSS-NML: AI Ticket Orchestration
+# OSS-NML: Chat AI Ticket Orchestration
 
 Live deployment: https://oss-nml.onrender.com/docs
 

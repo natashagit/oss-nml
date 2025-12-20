@@ -1,4 +1,4 @@
-# AI Ticket Service
+# Chat AI Ticket Service
 
 Live deployment: https://oss-nml.onrender.com/docs
 
