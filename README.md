@@ -1,545 +1,132 @@
-# AI + Ticket Orchestration Workspace
+# OSS-NML: AI Ticket Orchestration
 
-[![CircleCI](https://circleci.com/gh/ivanearisty/oss-taapp.svg?style=shield)](https://circleci.com/gh/ivanearisty/oss-taapp)
-[![Coverage](https://img.shields.io/badge/coverage-85%2B%25-brightgreen)](https://circleci.com/gh/ivanearisty/oss-taapp)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+Live deployment: https://oss-nml.onrender.com/docs
 
-This repository is a component-oriented workspace that demonstrates natural-language orchestration for tickets plus earlier AI/Mail stacks. The primary focus for HW3 is the AI Ticket Service that routes user text through an AI model, extracts intent, and executes ticket actions against a pluggable backend (Google Tasks or Trello).
+This repository is a `uv` workspace for the HW3 system integration. It wires a chat client
+(Discord), an AI router, and a ticket backend into a single pipeline:
 
-Included stacks:
-1. **AI Ticket Stack (new)**: AI → Ticket backend (Google Tasks or Trello) with a FastAPI orchestration service and adapter.
-2. **AI Service Stack**: OpenAI-powered AI assistant with conversational and structured output capabilities.
-3. **Mail Client Stack**: Gmail API integration for email management.
+Chat -> AI intent extraction -> Ticket backend -> AI formatting -> Chat response
 
-The project emphasizes strict separation of concerns, dependency injection, and a comprehensive automated toolchain to enforce code quality and best practices.
+## What's included
 
-## Architectural Philosophy
+- **ai_ticket_service**: FastAPI orchestration service (`/chat/command`, `/health`).
+- **tickets_api + tickets_client_impl**: Ticket interface + Google Tasks implementation.
+- **trello_ticket_impl**: Trello backend (imported as a dependency).
+- **chat_client_api + discord_client_impl**: Chat abstraction + Discord implementation.
+- **ai_api + openai_impl**: AI contract + OpenAI implementation.
+- **ai_ticket_adapter + ai_ticket_service_client**: Adapter + generated client for HTTP calls.
 
-This project is built on the principle of "programming integrated over time." The architecture is designed to combat complexity and ensure the system is maintainable and evolvable.
+Older HW2/HW1 stacks (AI service, mail service) remain in `src/` but are not required for HW3.
 
--   **Component-Based Design:** The system is broken down into four distinct, self-contained components. Each component has a single responsibility and can be "forklifted" out of this project to be used in another with minimal effort.
--   **Interface-Implementation Separation:** Every piece of functionality is defined by an abstract **contract** implemented as an ABC (the "what") and fulfilled by a concrete **implementation** (the "how"). This decouples our business logic from specific technologies (like Gmail).
--   **Dependency Injection:** Implementations are "injected" into the abstract contracts at runtime. This means consumers of the API only ever depend on the stable interface, not the volatile implementation details.
+## API
 
-## Core Components
+- `GET /health` - liveness check.
+- `POST /chat/command` - sends the user input through AI + ticket backend and posts to chat.
+Deployed docs: https://oss-nml.onrender.com/docs
 
-The project is a `uv` workspace containing multiple stacks:
-
-### AI Ticket Stack (HW3)
-1. **`ai_ticket_service`**: FastAPI orchestration service that calls AI to extract intent and then calls the configured ticket backend.
-2. **`ai_ticket_service_client`**: Auto-generated client for the ticket orchestration service.
-3. **`ai_ticket_adapter`**: Adapter that wraps the generated client and exposes the same contract locally.
-4. **Backends**: `tickets_client_impl` (Google Tasks) and `trello_ticket_impl` (Trello) selectable via `TICKET_BACKEND`.
-
-### AI Service Stack (HW2)
-
-1. **`ai_api`**: Defines the abstract `AIInterface` base class (ABC). This is the contract for AI operations (e.g., `generate_response`).
-2. **`openai_impl`**: Provides the `OpenAIClient` class, a concrete implementation using the OpenAI API. Supports both conversational and structured output.
-3. **`ai_service`**: A FastAPI service that wraps the `ai_api` interface and exposes REST endpoints (`/generate`, `/health`).
-4. **`ai_adapter`**: Wraps an auto-generated client from the OpenAPI spec and implements the `ai_api.AIInterface`. Makes remote service calls feel identical to local library usage.
-5. **`ai_service_client`**: Auto-generated Python client package (via `openapi-python-client`) that provides strongly-typed methods for interacting with the AI service.
-
-### Mail Client Stack
-
-1. **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for mail client operations (e.g., `get_messages`).
-2. **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation using the Gmail API.
-3. **`mail_client_service`**: A FastAPI service that wraps the `mail_client_api` interface and exposes REST endpoints (`/messages`, `/messages/{id}`, etc.).
-4. **`mail_client_adapter`**: Wraps an auto-generated client and implements the `mail_client_api.Client` interface.
-5. **`mail_client_service_client`**: Auto-generated Python client package for interacting with the mail service.
-
-## Project Structure
-
-```
-oss-nml/
-├── src/                            # Source packages (uv workspace members)
-│   ├── ai_api/                     # Abstract AI interface (ABC)
-│   ├── openai_impl/                # OpenAI-specific implementation
-│   ├── ai_service/                 # FastAPI web service for AI
-│   ├── ai_adapter/                 # Adapter wrapping service client
-│   ├── ai_service_client/          # Auto-generated AI service client
-│   ├── mail_client_api/            # Abstract mail client base class (ABC)
-│   ├── gmail_client_impl/          # Gmail-specific client implementation
-│   ├── mail_client_service/        # FastAPI web service for mail
-│   ├── mail_client_adapter/        # Adapter wrapping mail service client
-│   └── mail_client_service_client/ # Auto-generated mail service client
-├── tests/                          # Integration and E2E tests
-│   ├── integration/                # Component integration tests
-│   └── e2e/                        # End-to-end application tests
-├── docs/                           # Documentation source files
-├── .circleci/                      # CircleCI configuration
-├── main.py                         # Local demo entry point (AI ticket orchestration)
-├── pyproject.toml                  # Project configuration (dependencies, tools)
-├── uv.lock                         # Locked dependency versions
-└── .env.example                    # Example environment variables
-```
-
-## Project Setup
-
-### 1. Prerequisites
-
--   Python 3.11 or higher
--   `uv` – A fast, all-in-one Python package manager.
-
-### 2. Initial Setup
-
-1.  **Install `uv`:**
-    ```bash
-    # macOS / Linux
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    # Windows (PowerShell)
-    irm https://astral.sh/uv/install.ps1 | iex
-    ```
-
-2.  **Clone the Repository:**
-    ```bash
-    git clone <your-repository-url>
-    cd ta-assignment
-    ```
-
-3.  **Set Up API Credentials:**
-
-    **For AI Service (Required):**
-    ```bash
-    export OPENAI_API_KEY="your_openai_api_key_here"
-    ```
-    
-    Or create a `.env` file:
-    ```env
-    OPENAI_API_KEY=your_openai_api_key_here
-    ```
-
-    **For Gmail Service (Optional):**
-    -   Follow the [Google Cloud instructions](https://developers.google.com/gmail/api/quickstart/python#authorize_credentials_for_a_desktop_application) to enable the Gmail API and download your OAuth 2.0 credentials.
-    -   Rename the downloaded file to `credentials.json` and place it in the root of this project.
-    -   **Alternative**: For CI/CD environments, you can use environment variables instead:
-        ```bash
-        export GMAIL_CLIENT_ID="your_client_id"
-        export GMAIL_CLIENT_SECRET="your_client_secret"
-        export GMAIL_REFRESH_TOKEN="your_refresh_token"
-        ```
-    -   **Important:** Credential files contain secrets and are ignored by `.gitignore`.
-
-4.  **Create and Sync the Virtual Environment:**
-    This single command creates a `.venv` folder and installs all packages (including workspace members and development tools) defined in `uv.lock`.
-    ```bash
-    uv sync --all-packages --extra dev
-    ```
-
-5.  **Activate the Virtual Environment:**
-    ```bash
-    # macOS / Linux
-    source .venv/bin/activate
-    # Windows (PowerShell)
-    .venv\Scripts\Activate.ps1
-    ```
-
-6.  **Run the AI Ticket Orchestration Demo:**
-    ```bash
-    # Terminal 1: Start the AI ticket service (uses TICKET_BACKEND env)
-    UV_CACHE_DIR=.uv_cache PYTHONPATH=src uv run --extra dev uvicorn ai_ticket_service.main:app --reload --port 8000
-
-    # Terminal 2: Call the service via adapter demo
-    TICKET_BACKEND=trello uv run python main.py
-    ```
-
-    **For Gmail (Optional):**
-    Run the mail client once to perform the interactive OAuth flow. This will open a browser window for you to grant permission. After you approve, a `token.json` file will be created.
-
-## How to Run
-
-### Running the AI Ticket Service
-
-Configure environment variables:
-```bash
-export OPENAI_API_KEY="your_openai_api_key"
-# Backend selection
-export TICKET_BACKEND=google_tasks   # or trello
-
-# Google Tasks backend
-export TASKS_CLIENT_ID=...
-export TASKS_CLIENT_SECRET=...
-export TASKS_REFRESH_TOKEN=...
-
-# Trello backend
-export TRELLO_API_KEY=...
-export TRELLO_API_SECRET=...
-export TRELLO_TOKEN=...
-export TRELLO_BOARD_ID=...
-```
-
-Start the service:
-```bash
-UV_CACHE_DIR=.uv_cache PYTHONPATH=src uv run --extra dev uvicorn ai_ticket_service.main:app --reload --port 8000
-```
-
-Use `main.py` to exercise the adapter against the running service:
-```bash
-TICKET_BACKEND=trello uv run python main.py
-```
-
-### Running the AI Service Demo (HW2)
-
-The main demo (`main.py`) demonstrates the AI service with both conversational and structured output:
-
-```bash
-# 1. Set your OpenAI API key
-export OPENAI_API_KEY="your_openai_api_key_here"
-
-# 2. Start the AI service (Terminal 1)
-uv run uvicorn ai_service.main:app --reload
-
-# 3. Run the demo (Terminal 2)
-uv run python main.py
-```
-
-**Expected Output:**
-
-```
-Conversational response: Hello there friend!
-Structured response: {'intent': 'create_ticket', 'title': 'Fix login redirect'}
-AI demo complete.
-```
-
-### Running with Local Implementation (No Service)
-
-You can also run the AI client directly without the service:
-
-```bash
-export OPENAI_API_KEY="your_openai_api_key_here"
-
-python -c "
-import openai_impl
-from ai_api import get_client
-
-client = get_client()
-response = client.generate_response(
-    'What is 2+2?',
-    'You are a math tutor.'
-)
-print(response)
-"
-```
-
-### Sample Input/Output Examples
-
-#### Example 1: Conversational Response (No Schema)
-
-```python
-import openai_impl
-from ai_api import get_client
-
-client = get_client()
-
-response = client.generate_response(
-    user_input="Explain Python decorators in one sentence.",
-    system_prompt="You are concise and clear."
-)
-
-print(response)
-# Output: "Python decorators are functions that modify the behavior of other functions or classes."
-```
-
-#### Example 2: Structured Output (With Schema)
-
-```python
-import openai_impl
-from ai_api import get_client
-
-client = get_client()
-
-# Define a schema for email action extraction
-schema = {
-    "name": "email_action",
-    "description": "Extract email action intent and parameters",
-    "schema": {
-        "type": "object",
-        "properties": {
-            "action": {
-                "type": "string",
-                "enum": ["delete", "mark_as_read", "get_message", "list_messages"]
-            },
-            "message_id": {"type": "string"}
-        },
-        "required": ["action"],
-        "additionalProperties": False
-    }
+Request body:
+```json
+{
+  "user_input": "List all tickets"
 }
-
-response = client.generate_response(
-    user_input="Delete the email with ID 12345",
-    system_prompt="Extract the email action and parameters.",
-    response_schema=schema
-)
-
-print(response)
-# Output: {"action": "delete", "message_id": "12345"}
 ```
 
-#### Example 3: Intent Detection
-
-```python
-import openai_impl
-from ai_api import get_client
-
-client = get_client()
-
-schema = {
-    "name": "intent_detection",
-    "description": "Detect user intent",
-    "schema": {
-        "type": "object",
-        "properties": {
-            "intent": {
-                "type": "string",
-                "enum": ["email_management", "weather_query", "general_conversation"]
-            },
-            "confidence": {"type": "number"}
-        },
-        "required": ["intent", "confidence"],
-        "additionalProperties": False
-    }
+Response body (example):
+```json
+{
+  "status": "posted",
+  "channel_id": "1234567890",
+  "backend_used": "google_tasks",
+  "backend_status": "success",
+  "message": "Found 2 ticket(s)..."
 }
-
-response = client.generate_response(
-    user_input="Show me my last 5 unread emails",
-    system_prompt="Analyze the user's intent.",
-    response_schema=schema
-)
-
-print(response)
-# Output: {"intent": "email_management", "confidence": 0.95}
 ```
 
-#### Example 4: Using the Remote Service (via Adapter)
+## Configuration
+
+Create a `.env` file (or export env vars) with what you need for your selected backend.
+
+### AI
+- `OPENAI_API_KEY`
+
+### Ticket backend
+Common:
+- `TICKET_BACKEND=google_tasks` or `trello`
+
+Google Tasks:
+- `TASKS_CLIENT_ID`
+- `TASKS_CLIENT_SECRET`
+- `TASKS_REFRESH_TOKEN`
+- `TASKS_TOKEN_URI` (default: `https://oauth2.googleapis.com/token`)
+- `TASKS_INTERACTIVE` (`true` to allow interactive OAuth)
+
+Trello:
+- `TRELLO_API_KEY`
+- `TRELLO_API_SECRET`
+- `TRELLO_TOKEN`
+- `TRELLO_BOARD_ID`
+- `REDIRECT_URI` (optional, default `http://localhost:8000/callback`)
+
+### Chat (Discord)
+- `DISCORD_BOT_TOKEN`
+- `CHAT_CHANNEL_ID` (or `DISCORD_CHANNEL_ID`)
+- `DISCORD_DEFAULT_TOKEN_TYPE` (optional, default `Bot`)
+- `CHAT_SYSTEM_PROMPT` (optional)
+- `CHAT_USER_ID` (optional, used for auth lookup)
+
+### Test helpers
+- `AI_TICKET_SERVICE_URL` (used by adapter/e2e tests, default `http://127.0.0.1:8000`)
+
+## Run locally
 
 ```bash
-# Terminal 1: Start the service
-export OPENAI_API_KEY="your_key"
-uv run uvicorn ai_service.main:app --reload
+uv sync --all-packages --extra dev
+source .venv/bin/activate
 
-# Terminal 2: Use the adapter
-python -c "
-import ai_adapter
-from ai_api import get_client
-
-# Register the adapter to use the remote service
-ai_adapter.register(base_url='http://127.0.0.1:8000')
-
-client = get_client()
-response = client.generate_response(
-    'Say hello in 3 words',
-    'You are concise.'
-)
-print(response)
-"
-# Output: "Hello there friend!"
+UV_CACHE_DIR=.uv_cache PYTHONPATH=src \
+uv run --extra dev uvicorn ai_ticket_service.main:app --reload --port 8000
 ```
 
-## How It Works
-
-### AI Service Architecture
-
-```
-Consumer Code
-    ↓
-ai_api.get_client()
-    ↓
-    ├── openai_impl.OpenAIClient (Local)
-    │       ↓
-    │   OpenAI API
-    │
-    └── ai_adapter.ServiceClient (Remote)
-            ↓
-        ai_service_client (HTTP)
-            ↓
-        ai_service (FastAPI)
-            ↓
-        openai_impl.OpenAIClient
-            ↓
-        OpenAI API
-```
-
-**Key Features:**
-- **Conversational Mode**: Returns natural language responses
-- **Structured Mode**: Returns JSON matching a provided schema
-- **Intent Detection**: Perfect for analyzing user input and extracting structured data
-- **Seamless Switching**: Same code works with local or remote implementation
-
-### Mail Client Architecture
-
-```
-Consumer Code
-    ↓
-mail_client_api.get_client()
-    ↓
-    ├── gmail_client_impl.GmailClient (Local)
-    │       ↓
-    │   Gmail API
-    │
-    └── mail_client_adapter.ServiceClient (Remote)
-            ↓
-        mail_client_service_client (HTTP)
-            ↓
-        mail_client_service (FastAPI)
-            ↓
-        gmail_client_impl.GmailClient
-            ↓
-        Gmail API
-```
-
-**Supported Operations:**
-- Fetching messages
-- Retrieving a single message
-- Marking as read
-- Deleting messages
-
-## Development Workflow
-
-All commands should be run from the project root with the virtual environment activated.
-
-### Running the Application
-
-**AI Service:**
+Try it from another terminal:
 ```bash
-# Terminal 1: Start the AI service
-uv run uvicorn ai_service.main:app --reload
-
-# Terminal 2: Run the demo
-uv run python main.py
+curl -X POST http://127.0.0.1:8000/chat/command \
+  -H "Content-Type: application/json" \
+  -d '{"user_input":"List all tickets"}'
 ```
 
-**Mail Service (Optional):**
+Demo via adapter (uses `main.py`):
 ```bash
-# Start the mail service
-uv run uvicorn mail_client_service.main:app --reload --port 8001
+TICKET_BACKEND=google_tasks uv run python main.py
 ```
 
-**Access API Documentation:**
-- AI Service: http://127.0.0.1:8000/docs
-- Mail Service: http://127.0.0.1:8001/docs
+## Testing
 
-### Running the Toolchain
-
--   **Linting & Formatting (Ruff):**
-    The project uses Ruff with comprehensive rules configured in `pyproject.toml`.
-    ```bash
-    # Check for issues
-    uv run ruff check .
-    # Automatically fix issues
-    uv run ruff check . --fix
-    # Check formatting
-    uv run ruff format --check .
-    # Apply formatting
-    uv run ruff format .
-    ```
-
--   **Static Type Checking (MyPy):**
-    ```bash
-    uv run mypy src tests
-    ```
-
--   **Testing (Pytest):**
-
-    I'd recommend only running: `uv run pytest src/ tests/ -m "not local_credentials" -v` for simplicity.
-
-    The project uses a comprehensive testing strategy with different test categories.
-    ```bash
-    # Run all tests (includes unit, integration, and e2e tests)
-    uv run pytest
-
-    # Run only unit tests (fast, no external dependencies - from src/ directories)
-    uv run pytest src/
-
-    # Run all tests except those requiring local credential files
-    uv run pytest src/ tests/ -m "not local_credentials"
-
-    # Run only integration tests (requires environment variables or credentials)
-    uv run pytest -m integration
-
-    # Run only end-to-end tests (requires credentials)
-    uv run pytest -m e2e
-
-    # Run only CircleCI-compatible tests (CI/CD environment)
-    uv run pytest -m circleci
-
-    # Run tests with coverage reporting
-    uv run pytest --cov=src --cov-report=term-missing
-    ```
-
-### Viewing Documentation
-
-
-This project uses MkDocs for documentation.
 ```bash
-# Start the live-reloading documentation server
-uv run mkdocs serve
-```
-Open your browser to `http://127.0.0.1:8000` to view the site.
+# Unit tests (fast, no external deps)
+uv run pytest src/
 
-## Testing Infrastructure
+# Integration tests (mocked AI/tickets/chat)
+uv run pytest -m integration
 
-The project implements a sophisticated testing strategy designed for both local development and CI/CD environments:
+# End-to-end tests (requires running service + chat creds)
+uv run pytest -m e2e
 
-### Test Categories
-
-- **Unit Tests** (`src/*/tests/`): Fast, isolated tests with mocked dependencies
-- **Integration Tests** (`tests/integration/`): Tests that verify component interactions
-- **End-to-End Tests** (`tests/e2e/`): Full application workflow tests
-- **CircleCI Tests**: CI/CD-compatible tests that handle missing credentials gracefully
-- **Local Credentials Tests**: Tests that require `credentials.json` or `token.json` files
-
-### Test Markers
-
-The project uses pytest markers to categorize tests:
-```bash
-@pytest.mark.unit              # Fast unit tests
-@pytest.mark.integration       # Integration tests
-@pytest.mark.e2e              # End-to-end tests
-@pytest.mark.circleci         # CI/CD compatible
-@pytest.mark.local_credentials # Requires local auth files
+# Full suite excluding tests that need local credentials
+uv run pytest src/ tests/ -m "not local_credentials"
 ```
 
-### Authentication in Tests
+## Telemetry & Deployment
 
-The testing infrastructure handles different authentication scenarios:
-- **Local Development**: Uses `credentials.json` and `token.json` files
-- **CI/CD Environment**: Uses environment variables (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`)
-- **Missing Credentials**: Tests fail fast with clear error messages (no hanging)
+- Metrics are exposed at `/metrics` (Prometheus format) by `prometheus_fastapi_instrumentator`.
+- `deploy/` contains a Dockerfile, docker-compose, and Prometheus config for local monitoring.
+- `terraform/main.tf` provisions an AWS EC2 host for the app + Grafana/Prometheus stack.
 
-## Continuous Integration
+## Repository layout (key paths)
 
-The project includes a comprehensive CircleCI configuration (`.circleci/config.yml`) with:
-
-- **All Branches**: Unit tests, linting, and CI-compatible tests
-- **Main/Develop**: Additional integration tests with real Gmail API calls
-- **Artifacts**: Coverage reports, test results, and build summaries
-
-See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
-
-## Deployment
-
-- **Containerization**:  
-  The FastAPI `mail_client_service` has been containerized with a production-ready `Dockerfile`.  
-
-- **Fly.io Deployment**:  
-  The service is deployed on **Fly.io**, with configuration managed via `fly.toml`.
-
-- **Public Endpoint**:  
-  The deployed service is available over HTTPS at:  
-  👉 [https://oss-nml.fly.dev/](https://oss-nml.fly.dev/)  
-
-## Development Workflow
-
-### Quick Start
-1. **Install dependencies**: `uv sync --all-packages --extra dev`
-2. **Run tests**: `uv run pytest tests/ -v` or `uv run pytest src/ tests/ -m "not local_credentials" -v`
-3. **Check code quality**: `uv run ruff check . && uv run ruff format --check .`
-4. **Fix formatting**: `uv run ruff format .`
-5. **View documentation**: `uv run mkdocs serve`
-
-### Best Practices
-- Run unit tests (`uv run pytest src/`) during development for fast feedback
-- Use integration tests (`uv run pytest -m integration`) to verify component interactions
-- Run full test suite (`uv run pytest`) before pushing to ensure CI compatibility
-- The CircleCI pipeline provides automated validation on every push
+- `src/ai_ticket_service/` - orchestration service
+- `src/tickets_api/` - ticket interface
+- `src/tickets_client_impl/` - Google Tasks backend
+- `src/chat_client_api/` - chat interface
+- `src/discord_client_impl/` - Discord implementation
+- `tests/integration/` - integration tests
+- `tests/e2e/` - end-to-end tests
