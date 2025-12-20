@@ -1,0 +1,18 @@
+[project]
+name = "ai-ticket-service"
+version = "0.1.0"
+description = "FastAPI service orchestrating AI and ticket creation"
+requires-python = ">=3.11"
+dependencies = [
+    "ai-api",
+    "openai-impl",
+    "tickets-api",
+    "tickets-client-impl",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "python-dotenv>=1.0.1",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

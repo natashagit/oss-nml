@@ -1,69 +1,135 @@
-"""Main module for demonstrating the mail client."""
+"""Entry point for demonstrating the AI Ticket orchestration via the adapter."""
 
-# ta-assignment/main.py
+from __future__ import annotations
 
-import contextlib
 import logging
+import os
+from typing import Any
 
-import mail_client_adapter
-import mail_client_api
+from dotenv import load_dotenv
 
-# Register the service adapter
-mail_client_adapter.register()
+from ai_ticket_adapter import TicketOrchestrationAdapter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+load_dotenv()
+
+SYSTEM_PROMPT = "You route user requests into structured ticket commands."
+
+
+def _extract_id_from_item(item: object) -> str | None:
+    """Extract ticket ID from various object types (dict, object with to_dict, or additional_properties).
+
+    Args:
+        item: The object to extract the ID from (dict, object, or other)
+
+    Returns:
+        str | None: The extracted ticket ID as a string, or None if not found
+
+    """
+    if isinstance(item, dict):
+        tid = item.get("id")
+        if tid:
+            return str(tid)
+    if hasattr(item, "to_dict"):
+        data = item.to_dict()  # type: ignore[no-untyped-call]
+        tid = data.get("id")
+        if tid:
+            return str(tid)
+    if hasattr(item, "additional_properties"):
+        tid = getattr(item, "additional_properties", {}).get("id")
+        if tid:
+            return str(tid)
+    return None
+
+
+def _first_ticket_id(ticket_result: object) -> str | None:
+    """Find the first available ticket ID from a ticket result (single ticket, object, or list).
+
+    Args:
+        ticket_result: Result from ticket operation (dict, object, or list of tickets)
+
+    Returns:
+        str | None: The first found ticket ID, or None if no ID is available
+
+    """
+    if isinstance(ticket_result, dict):
+        return _extract_id_from_item(ticket_result)
+    if hasattr(ticket_result, "to_dict") or hasattr(ticket_result, "additional_properties"):
+        return _extract_id_from_item(ticket_result)
+    if isinstance(ticket_result, list):
+        for item in ticket_result:
+            tid = _extract_id_from_item(item)
+            if tid:
+                return tid
+    return None
+
+
+def _call(adapter: TicketOrchestrationAdapter, user_input: str) -> dict[str, Any]:
+    """Call the ticket orchestration adapter with user input and print results.
+
+    Args:
+        adapter: The TicketOrchestrationAdapter instance to use
+        user_input: Natural language input from the user
+
+    Returns:
+        dict[str, Any]: Dictionary containing ai_result and ticket_result from the adapter
+
+    """
+    backend = os.getenv("TICKET_BACKEND", "google_tasks")
+    resp = adapter.raw_response(
+        user_input=user_input,
+        system_prompt=SYSTEM_PROMPT,
+        backend=backend,
+    )
+    print("AI result:", resp.ai_result)  # noqa: T201
+    print("Ticket result:", resp.ticket_result)  # noqa: T201
+    return {"ai_result": resp.ai_result, "ticket_result": resp.ticket_result}
 
 
 def main() -> None:
-    """Initialize the client and demonstrate all mail client methods."""
-    client = mail_client_api.get_client()
+    """Exercise create/search/get/update/delete via the AI Ticket service."""
+    base_url = os.getenv("AI_TICKET_SERVICE_URL", "http://127.0.0.1:8000")
+    adapter = TicketOrchestrationAdapter(base_url=base_url)
+    logger.info("Calling AI Ticket service at %s", base_url)
 
-    # Test 1: Get messages (existing functionality)
-    messages = list(client.get_messages(max_results=3))
+    # 1) Create
+    print("\n=== CREATE ===")  # noqa: T201
+    create_data = _call(
+        adapter,
+        "Create a ticket to add rate limiting to the public API and monitor 429s.",
+    )
+    ticket_id = _first_ticket_id(create_data.get("ticket_result"))
+    if not ticket_id and isinstance(create_data.get("ai_result"), dict):
+        candidate = create_data["ai_result"].get("ticket_id")
+        ticket_id = candidate or ticket_id
 
-    if not messages:
+    # 2) Search all tickets and pick first id if none yet
+    print("\n=== SEARCH ALL ===")  # noqa: T201
+    search_data = _call(adapter, "List all tickets.")
+    if not ticket_id:
+        ticket_id = _first_ticket_id(search_data.get("ticket_result"))
+
+    if not ticket_id:
+        print("No ticket id available; cannot continue further ops.")  # noqa: T201
         return
 
-    for _i, _msg in enumerate(messages, 1):
-        pass
+    # 3) Get by id
+    print("\n=== GET BY ID ===")  # noqa: T201
+    _call(adapter, f"Fetch the ticket with ID {ticket_id}.")
 
-    # Test 2: Get a specific message by ID
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            client.get_message(test_message_id)
+    # 4) Update
+    print("\n=== UPDATE ===")  # noqa: T201
+    _call(
+        adapter,
+        f"Mark ticket {ticket_id} as completed and title it 'API rate limit deployed'.",
+    )
 
-    # Test 3: Mark a message as read
-    if messages:
-        test_message_id = messages[0].id
-        with contextlib.suppress(Exception):
-            success = client.mark_as_read(test_message_id)
-            if success:
-                pass
-            else:
-                pass
+    # 5) Delete
+    print("\n=== DELETE ===")  # noqa: T201
+    _call(adapter, f"Delete ticket {ticket_id}.")
 
-    # Test 4: Delete a message (WARNING: This is destructive!)
-    # Only test if we have more than one message to avoid deleting all messages
-    if len(messages) > 1:
-        # Ask for confirmation before deleting
-        delete_message_id = messages[-1].id  # Delete the last message
-        try:
-            confirmation = input("Type 'DELETE' to confirm deletion: ")
-            if confirmation == "DELETE":
-                success = client.delete_message(delete_message_id)
-                if success:
-                    logger.info("Message with ID %s deleted.", delete_message_id)
-                else:
-                    logger.info("Failed to delete message with ID %s.", delete_message_id)
-        except EOFError:
-            # This means that CircleCI or another non-interactive environment is not going to actually delete anything
-            pass
-    else:
-        pass
-
-    print("Demo complete.")  # noqa: T201
+    print("\nDemo complete.")  # noqa: T201
 
 
 if __name__ == "__main__":

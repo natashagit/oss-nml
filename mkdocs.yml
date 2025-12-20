@@ -1,5 +1,5 @@
-site_name: Mail Client Project
-site_description: "A professional-grade template for a modern Python project."
+site_name: OSS-NML AI Ticket Orchestration
+site_description: "Chat-driven AI ticket orchestration with pluggable ticket backends."
 
 theme:
   name: material
@@ -21,11 +21,28 @@ theme:
 nav:
   - 'Overview': 'index.md'
   - 'Architecture': 'component.md'
-  - 'API Reference':
-    - 'Message Protocol': 'api/message.md'
-    - 'Mail Client API': 'api/mail_client_api.md'
-    - 'Gmail Client Implementation': 'api/gmail_client_impl.md'
-    - 'Gmail Message Implementation': 'api/gmail_message_impl.md'
+  - 'AI Ticket Service':
+    - 'Overview': 'ai_ticket/overview.md'
+    - 'API': 'ai_ticket/api.md'
+  - 'Chat Integration':
+    - 'Discord': 'chat/discord.md'
+  - 'Ticket Backends':
+    - 'Overview': 'tickets/backends.md'
+  - 'Observability': 'observability.md'
+  - 'Testing': 'testing.md'
+  - 'CI/CD': 'circleci-setup.md'
+  - 'Legacy Stacks':
+    - 'AI Service Stack':
+      - 'Overview': 'ai/overview.md'
+      - 'AI API': 'ai/ai_api.md'
+      - 'OpenAI Implementation': 'ai/openai_impl.md'
+      - 'AI Service': 'ai/ai_service.md'
+      - 'AI Adapter': 'ai/ai_adapter.md'
+      - 'AI Service Client': 'ai/ai_service_client.md'
+    - 'Mail Client Stack':
+      - 'Overview': 'mail/overview.md'
+      - 'Mail Client API': 'api/mail_client_api.md'
+      - 'Gmail Client Implementation': 'api/gmail_client_impl.md'
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -36,13 +53,18 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          paths:
+            - src/ai_api/src
+            - src/openai_impl/src
+            - src/ai_service/src
+            - src/ai_adapter/src
+            - src/ai_service_client
+            - src/mail_client_api/src
+            - src/gmail_client_impl/src
+            - src/mail_client_service/src
+            - src/mail_client_adapter/src
+            - src/mail_client_service_client
           options:
-            # This helps mkdocstrings find packages in the src directory
-            search_paths: 
-              - src/message/src
-              - src/mail_client_api/src
-              - src/gmail_client_impl/src
-              - src/gmail_message_impl/src
             show_source: false
             docstring_section_style: spacy
             members_order: source

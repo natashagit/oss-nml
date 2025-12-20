@@ -8,12 +8,16 @@ wheels/
 
 # Virtual environments
 .venv
+.python-version
 
 # Tooling Caches
 .mypy_cache/
+.dmypy.json
+dmypy.json
 .pytest_cache/
 .ruff_cache/
 .coverage
+coverage.xml
 
 # Build artifacts
 dist/
@@ -23,6 +27,9 @@ build/
 # IDE files
 .vscode/
 .idea/
+
+# macOS files
+.DS_Store
 
 # MkDocs build artifacts
 site/
@@ -34,3 +41,18 @@ credentials.json
 
 .coverage*
 TESTING_STATUS.md
+
+
+# Ignore keys
+*.pem
+
+# Ignore Terraform state and plugins
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Ignore Python stuff
+__pycache__/
+*.pyc
+.env

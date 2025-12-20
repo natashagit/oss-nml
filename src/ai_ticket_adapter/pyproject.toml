@@ -1,0 +1,12 @@
+[project]
+name = "ai-ticket-adapter"
+version = "0.1.0"
+description = "Adapter that calls the AI Ticket FastAPI service"
+requires-python = ">=3.11"
+dependencies = [
+    "ai-ticket-service-client",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
